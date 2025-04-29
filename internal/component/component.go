@@ -2,6 +2,7 @@ package component
 
 import (
 	"context"
+	"log/slog"
 	"time"
 )
 
@@ -26,12 +27,20 @@ type Component struct {
 
 	ImplCheckReady    func(context.Context) (bool, error)
 	CheckReadyOptions CheckReadyOptions
+
+	// Values provided by by [ConnectController]
+	log            *slog.Logger
+	notifyOnExited func(*Component, error)
+
+	// Lifecycle-related state, created in [Start]
+	runCtxCancel context.CancelFunc
+	doneCh       chan struct{}
 }
 
-type StartStopWrapper struct {
-	ImplStart func(context.Context) error
-	ImplStop  func(context.Context) error
-
-	StartTimeout time.Duration
-	StopTimeout  time.Duration
+func (c *Component) ConnectController(
+	log *slog.Logger,
+	notifyOnExited func(*Component, error),
+) {
+	c.log = log
+	c.notifyOnExited = notifyOnExited
 }
