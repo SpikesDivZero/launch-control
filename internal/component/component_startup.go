@@ -35,13 +35,6 @@ func (c *Component) Start(ctx context.Context) error {
 }
 
 func (c *Component) monitorExit(ctx context.Context, runErrCh <-chan error) {
-	checkForPrematureClose := func(err error, ok bool) error {
-		if ok {
-			return err
-		}
-		return errPrematureChannelClose
-	}
-
 	select {
 	case <-ctx.Done():
 		// Fall through

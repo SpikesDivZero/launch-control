@@ -2,11 +2,8 @@ package component
 
 import (
 	"context"
-	"errors"
 	"time"
 )
-
-var errPrematureChannelClose = errors.New("channel closed without sending a result value")
 
 type Pair[T1, T2 any] struct {
 	a T1
@@ -52,19 +49,10 @@ func AsyncCall[RT any](
 		defer close(returnCh)
 		defer ctxCancel()
 
-		writeUserResult := func(r RT, ok bool) {
-			if ok {
-				returnCh <- ReturnType{r, nil}
-			} else {
-				// Probably shouldn't happen, but just in case
-				returnCh <- ReturnType{zeroRT, errPrematureChannelClose}
-			}
-		}
-
 		// Wait for either the call to complete or our call context to be cancelled.
 		select {
 		case r, ok := <-innerCh:
-			writeUserResult(r, ok)
+			returnCh <- ReturnType{r, checkForPrematureClose(nil, ok)}
 			return
 
 		case <-ctx.Done():
@@ -89,7 +77,7 @@ func AsyncCall[RT any](
 			returnCh <- ReturnType{zeroRT, context.Cause(ctx)}
 
 		case r, ok := <-innerCh:
-			writeUserResult(r, ok)
+			returnCh <- ReturnType{r, checkForPrematureClose(nil, ok)}
 		}
 	}()
 
