@@ -1,0 +1,48 @@
+package component
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"math"
+	"math/rand/v2"
+	"testing"
+	"time"
+)
+
+// Same as in top-level package, but copied here to avoid import
+const NoTimeout time.Duration = 50 * (time.Hour * 24 * 365)
+
+func newTestingComponent(*testing.T) *Component {
+	return &Component{
+		Name: fmt.Sprintf("testing-comp-%d", rand.Int32()),
+
+		ImplRun: func(ctx context.Context) error {
+			panic("TestingComponent.ImplRun not defined, but used in test")
+		},
+
+		ImplShutdown: func(ctx context.Context) error {
+			panic("TestingComponent.ImplShutdown not defined, but used in test")
+		},
+		ShutdownOptions: ShutdownOptions{
+			CallTimeout:       NoTimeout,
+			CompletionTimeout: NoTimeout,
+		},
+
+		ImplCheckReady: func(ctx context.Context) (bool, error) {
+			panic("TestingComponent.ImplCheckReady not defined, but used in test")
+		},
+		CheckReadyOptions: CheckReadyOptions{
+			CallTimeout: NoTimeout,
+			Backoff: func() time.Duration {
+				panic("TestingComponent.CheckReadyOptions.Backoff not defined, but used in test")
+			},
+			MaxAttempts: math.MaxInt,
+		},
+
+		log: slog.New(slog.DiscardHandler),
+		notifyOnExited: func(c *Component, err error) {
+			panic("TestingComponent.notifyOnExited not defined but used in test")
+		},
+	}
+}
