@@ -162,7 +162,7 @@ func TestAsyncCall(t *testing.T) {
 				}
 
 				t0 := time.Now()
-				ch := AsyncCall(ctx, tt.args.timeout, tt.args.f, tt.args.timeoutGrace)
+				ch := AsyncCall(ctx, tt.args.timeout, tt.args.timeoutGrace, tt.args.f)
 				got, err := (<-ch).Values()
 				gotD := time.Since(t0)
 

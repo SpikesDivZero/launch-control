@@ -15,12 +15,16 @@ func (p Pair[T1, T2]) Values() (T1, T2) {
 }
 
 // Wraps a call to the provided function, returning it's result in a channel.
-// In the event of a timeout, the context.Cause value is returned in
+//
+// If the error slot contains [errPrematureChannelClose], it means the provided function invoked [runtime.Goexit].
+//
+// Any other non-nil value in the error slot will be a return from [context.Cause]. This includes a timeout being
+// hit, as we do not differentiate a [context.DeadlineExceeded] as being from this timeout or a parent timeout.
 func AsyncCall[RT any](
 	ctx context.Context,
 	timeout time.Duration,
-	f func(context.Context) RT,
 	timeoutGrace time.Duration,
+	f func(context.Context) RT,
 ) <-chan Pair[RT, error] {
 
 	// Our top-level return type and channel.
