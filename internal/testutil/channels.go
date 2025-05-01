@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"reflect"
+	"sync"
 	"testing"
 )
 
@@ -55,4 +56,11 @@ func ChanReadIs[T any](t *testing.T, ch <-chan T, wantStatus ChanReadStatus, wan
 				"\tWant: %#v",
 			value, wantValue)
 	}
+}
+
+// Returns a channel, along with a closer for that channel.
+// The close function is wrapped with [sync.OnceFunc] so make it safe to call multiple times.
+func ChanWithCloser[T any](cap int) (chan T, func()) {
+	ch := make(chan T, cap)
+	return ch, sync.OnceFunc(func() { close(ch) })
 }

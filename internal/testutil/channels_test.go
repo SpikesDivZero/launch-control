@@ -45,3 +45,21 @@ func TestChanReadIs(t *testing.T) {
 		expectFail("closed", ChanReadStatusOk, "boop")       // actual Closed+""
 	})
 }
+
+func TestChanWithCloser(t *testing.T) {
+	ch, closeCh := ChanWithCloser[int](1)
+
+	// Works as normal
+	ch <- 12
+	closeCh()
+	test.Eq(t, 12, <-ch)
+
+	// It's actually closed (trying to close it directly results in a panic)
+	func() {
+		defer WantPanic(t, "close of closed channel")
+		close(ch)
+	}()
+
+	// We can use our closer it a second time without a panic
+	closeCh()
+}
