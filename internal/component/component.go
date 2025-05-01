@@ -44,3 +44,7 @@ func (c *Component) ConnectController(
 	c.log = log
 	c.notifyOnExited = notifyOnExited
 }
+
+func (c *Component) logError(in string, err error) {
+	c.log.Error("Component returned an error", "stage", in, "err", err)
+}
