@@ -10,7 +10,8 @@ func (c *Component) Start(ctx context.Context) error {
 	if c.doneCh != nil {
 		panic("Start called twice?")
 	}
-	c.doneCh = make(chan struct{})
+	doneCh := make(chan struct{})
+	c.doneCh = doneCh
 
 	// The runCtx should only be used for the ImplRun call.
 	// All other cases in here should continue to use the parent context.
@@ -21,7 +22,7 @@ func (c *Component) Start(ctx context.Context) error {
 	go func() {
 		defer func() {
 			close(runErrCh)
-			close(c.doneCh)
+			close(doneCh)
 		}()
 		runErrCh <- c.ImplRun(runCtx)
 	}()

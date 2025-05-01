@@ -34,7 +34,7 @@ type Component struct {
 
 	// Lifecycle-related state, created in [Start]
 	runCtxCancel context.CancelFunc
-	doneCh       chan struct{}
+	doneCh       <-chan struct{}
 }
 
 func (c *Component) ConnectController(
