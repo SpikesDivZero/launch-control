@@ -30,7 +30,7 @@ type Component struct {
 
 	// Values provided by by [ConnectController]
 	log            *slog.Logger
-	notifyOnExited func(*Component, error)
+	notifyOnExited func(error)
 
 	// Lifecycle-related state, created in [Start]
 	runCtxCancel context.CancelFunc
@@ -39,7 +39,7 @@ type Component struct {
 
 func (c *Component) ConnectController(
 	log *slog.Logger,
-	notifyOnExited func(*Component, error),
+	notifyOnExited func(error),
 ) {
 	c.log = log
 	c.notifyOnExited = notifyOnExited

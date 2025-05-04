@@ -29,7 +29,7 @@ func TestComponent_Start(t *testing.T) {
 		}
 
 		exitNotifiedCh := make(chan error, 1)
-		c.notifyOnExited = func(c *Component, err error) {
+		c.notifyOnExited = func(err error) {
 			exitNotifiedCh <- err
 			close(exitNotifiedCh)
 		}
@@ -94,7 +94,7 @@ func TestComponent_Start(t *testing.T) {
 			<-ctx.Done()
 			return nil
 		}
-		c.notifyOnExited = func(c *Component, err error) {}
+		c.notifyOnExited = func(err error) {}
 
 		c.CheckReadyOptions.MaxAttempts = 1
 		c.ImplCheckReady = func(ctx context.Context) (bool, error) {
@@ -203,8 +203,7 @@ func TestComponent_monitorExit(t *testing.T) {
 
 				// We use a channel to test the result here so we can check timings.
 				resultCh := make(chan error, 2)
-				c.notifyOnExited = func(gotC *Component, err error) {
-					test.Eq(t, c, gotC)
+				c.notifyOnExited = func(err error) {
 					resultCh <- err
 				}
 

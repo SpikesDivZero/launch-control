@@ -41,7 +41,7 @@ func newTestingComponent(*testing.T) *Component {
 		},
 
 		log: slog.New(slog.DiscardHandler),
-		notifyOnExited: func(c *Component, err error) {
+		notifyOnExited: func(err error) {
 			panic("TestingComponent.notifyOnExited not defined but used in test")
 		},
 	}

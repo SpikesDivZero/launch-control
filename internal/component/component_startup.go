@@ -41,8 +41,7 @@ func (c *Component) monitorExit(ctx context.Context, runErrCh <-chan error) {
 		// Fall through
 
 	case err, ok := <-runErrCh:
-		err = checkForPrematureClose(err, ok)
-		c.notifyOnExited(c, err)
+		c.notifyOnExited(checkForPrematureClose(err, ok))
 		return
 	}
 
@@ -51,8 +50,7 @@ func (c *Component) monitorExit(ctx context.Context, runErrCh <-chan error) {
 		c.log.Debug("Component.monitorExit is exiting while the component is still alive.")
 
 	case err, ok := <-runErrCh:
-		err = checkForPrematureClose(err, ok)
-		c.notifyOnExited(c, err)
+		c.notifyOnExited(checkForPrematureClose(err, ok))
 		return
 	}
 }
