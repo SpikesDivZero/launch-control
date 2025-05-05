@@ -3,6 +3,8 @@ package debug
 import (
 	"strings"
 	"testing"
+
+	"github.com/spikesdivzero/launch-control/internal/testutil"
 )
 
 func TestTidyStack(t *testing.T) {
@@ -57,4 +59,10 @@ func TestTidyStack(t *testing.T) {
 		t.Errorf("stack contains %q %v times, wanted 3", needle, count)
 		failOutWithStack()
 	}
+
+	// And one sin of a test...
+	t.Run("panic on too large skip", func(t *testing.T) {
+		defer testutil.WantPanic(t, "internal error: chompLine failed: got idx = -1 while looking for newline")
+		TidyStack(10000)
+	})
 }

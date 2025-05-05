@@ -2,12 +2,16 @@ package component
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
 	"math/rand/v2"
 	"testing"
 	"time"
+
+	"github.com/shoenig/test"
+	"github.com/shoenig/test/must"
 )
 
 // Same as in top-level package, but copied here to avoid import
@@ -45,4 +49,25 @@ func newTestingComponent(*testing.T) *Component {
 			panic("TestingComponent.notifyOnExited not defined but used in test")
 		},
 	}
+}
+
+func TestComponent_ConnectController(t *testing.T) {
+	c := Component{}
+
+	testLog := slog.New(slog.DiscardHandler)
+
+	testErr := errors.New("fancy")
+	calledTestNotify := false
+	testNotify := func(err error) {
+		calledTestNotify = true
+		test.ErrorIs(t, err, testErr)
+	}
+
+	c.ConnectController(testLog, testNotify)
+
+	test.EqOp(t, testLog, c.log)
+
+	must.NotNil(t, c.notifyOnExited)
+	c.notifyOnExited(testErr)
+	test.True(t, calledTestNotify)
 }
