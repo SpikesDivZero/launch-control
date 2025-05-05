@@ -86,7 +86,7 @@ func TestComponent_Start(t *testing.T) {
 		defer testutil.WantPanic(t, "Start called twice?")
 		c := newTestingComponent(t)
 		c.doneCh = make(chan struct{})
-		c.Start(t.Context())
+		_ = c.Start(t.Context())
 	})
 
 	t.Run("waitReady error result handling", func(t *testing.T) {
