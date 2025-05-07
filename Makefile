@@ -7,6 +7,7 @@ help:
 test:
 	GOEXPERIMENT=synctest go test -coverprofile coverage.out -v ./...
 	go tool cover -html=coverage.out -o coverage.html
+	GOEXPERIMENT=synctest golangci-lint run ./...
 
 .PHONY: generate
 generate:
