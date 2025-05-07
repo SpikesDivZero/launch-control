@@ -19,8 +19,8 @@ func NewController(ctx context.Context, log *slog.Logger) Controller {
 	return Controller{impl: controller.New(ctx, log)}
 }
 
-func (c *Controller) Launch(name string, opts ComponentOption) {
-	comp, err := buildComponent(name, opts)
+func (c *Controller) Launch(name string, opts ...ComponentOption) {
+	comp, err := buildComponent(name, opts...)
 	if err != nil {
 		panic(fmt.Sprintf("component build failed: %v", err))
 	}
