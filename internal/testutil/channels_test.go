@@ -9,6 +9,14 @@ import (
 // Silly bit to provide "coverage" for a stringer branch.
 func init() { _ = ChanReadStatus(-1).String() }
 
+func wantFail(t *testing.T, f func(*testing.T)) {
+	t.Helper()
+
+	mockT := &testing.T{}
+	f(mockT)
+	test.True(t, mockT.Failed())
+}
+
 func TestChanReadIs(t *testing.T) {
 	t.Run("happy path", func(t *testing.T) {
 		ch := make(chan int, 3)
@@ -47,6 +55,34 @@ func TestChanReadIs(t *testing.T) {
 		expectFail("both", ChanReadStatusClosed, "wrogn")    // actual Ok+"again"
 		expectFail("closed", ChanReadStatusOk, "boop")       // actual Closed+""
 	})
+}
+
+func TestChanReadIsClosed(t *testing.T) {
+	ch := make(chan string, 1)
+	ch <- "boop"
+	close(ch)
+
+	wantFail(t, func(t *testing.T) { ChanReadIsClosed(t, ch) })
+	ChanReadIsClosed(t, ch)
+}
+
+func TestChanReadIsBlocked(t *testing.T) {
+	ch := make(chan string, 1)
+	ch <- "boop"
+	defer close(ch)
+
+	wantFail(t, func(t *testing.T) { ChanReadIsBlocked(t, ch) })
+	ChanReadIsBlocked(t, ch)
+}
+
+func TestChanReadIsOk(t *testing.T) {
+	ch := make(chan string, 2)
+	ch <- "boop"
+	ch <- "again"
+	close(ch)
+
+	wantFail(t, func(t *testing.T) { ChanReadIsOk(t, ch, "wrong") })
+	ChanReadIsOk(t, ch, "again")
 }
 
 func TestChanWithCloser(t *testing.T) {
