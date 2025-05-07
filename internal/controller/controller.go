@@ -26,6 +26,7 @@ type Controller struct {
 	requestStopCh   chan struct{}
 	requestLaunchCh chan launchRequest
 	firstError      error
+	components      []Component
 }
 
 func New(ctx context.Context, log *slog.Logger) *Controller {
