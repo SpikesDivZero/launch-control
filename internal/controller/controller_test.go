@@ -69,6 +69,11 @@ func TestController_Launch(t *testing.T) {
 		synctest.Wait()
 		testutil.ChanReadIsBlocked(t, launchDone)
 
+		// Check to see that it was connected
+		test.True(t, mc.Recorder.Connect.Called)
+		test.Eq(t, c.log, mc.Recorder.Connect.Log)
+		test.NotNil(t, mc.Recorder.Connect.NotifyOnExited) // TODO: extend testing on this?
+
 		select {
 		case req := <-c.requestLaunchCh:
 			close(req.doneCh)

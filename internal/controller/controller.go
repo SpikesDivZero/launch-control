@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 )
@@ -42,6 +43,12 @@ func New(ctx context.Context, log *slog.Logger) *Controller {
 }
 
 func (c *Controller) Launch(name string, comp Component) {
+	comp.ConnectController(c.log, func(err error) {
+		if err != nil {
+			c.RequestStop(fmt.Errorf("component %v run exited: %w", name, err))
+		}
+	})
+
 	<-c.sendLaunchRequest(name, comp)
 }
 
