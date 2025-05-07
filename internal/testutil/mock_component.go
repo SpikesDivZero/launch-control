@@ -1,0 +1,75 @@
+package testutil
+
+import (
+	"context"
+	"log/slog"
+	"time"
+)
+
+// For testing the controller, I'd like a trivial mock for the controller.Component interface.
+// There's an argument to be made in favor of full mocking frameworks, but I kinda like the
+// practice and simplicity of a thing that can simulate delays.
+
+type MockComponent struct {
+	StartOptions struct {
+		Hook  func()
+		Sleep time.Duration
+		Err   error
+	}
+
+	ShutdownOptions struct {
+		Hook  func()
+		Sleep time.Duration
+		Err   error
+	}
+
+	Recorder struct {
+		Connect struct {
+			Called         bool
+			Log            *slog.Logger
+			NotifyOnExited func(error)
+		}
+		Start struct {
+			Called bool
+			Ctx    context.Context
+		}
+		Shutdown struct {
+			Called bool
+			Ctx    context.Context
+		}
+	}
+}
+
+func (mc *MockComponent) ConnectController(
+	log *slog.Logger,
+	notifyOnExited func(error),
+) {
+	rc := &mc.Recorder.Connect
+	rc.Called = true
+	rc.Log = log
+	rc.NotifyOnExited = notifyOnExited
+}
+
+func (mc *MockComponent) Start(ctx context.Context) error {
+	rc := &mc.Recorder.Start
+	rc.Called = true
+	rc.Ctx = ctx
+
+	if hook := mc.StartOptions.Hook; hook != nil {
+		hook()
+	}
+	time.Sleep(mc.StartOptions.Sleep)
+	return mc.StartOptions.Err
+}
+
+func (mc *MockComponent) Shutdown(ctx context.Context) error {
+	rc := &mc.Recorder.Shutdown
+	rc.Called = true
+	rc.Ctx = ctx
+
+	if hook := mc.ShutdownOptions.Hook; hook != nil {
+		hook()
+	}
+	time.Sleep(mc.ShutdownOptions.Sleep)
+	return mc.ShutdownOptions.Err
+}

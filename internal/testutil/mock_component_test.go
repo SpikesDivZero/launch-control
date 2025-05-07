@@ -1,0 +1,97 @@
+//go:build goexperiment.synctest
+
+package testutil
+
+import (
+	"errors"
+	"log/slog"
+	"testing"
+	"testing/synctest"
+	"time"
+
+	"github.com/shoenig/test"
+)
+
+func TestMockComponent_ConnectController(t *testing.T) {
+	var testNotifyGot error
+	testNotify := func(err error) { testNotifyGot = err }
+
+	log := slog.New(slog.DiscardHandler)
+
+	mc := &MockComponent{}
+	mc.ConnectController(log, testNotify)
+
+	testErr := errors.New("boop")
+	mc.Recorder.Connect.NotifyOnExited(testErr)
+	test.ErrorIs(t, testNotifyGot, testErr)
+
+	test.Eq(t, log, mc.Recorder.Connect.Log)
+}
+
+func TestMockComponent_Start(t *testing.T) {
+	synctest.Run(func() {
+		mc := &MockComponent{}
+		test.False(t, mc.Recorder.Start.Called)
+
+		commonChecks := func(wantD time.Duration, wantErrIs error) {
+			mc.Recorder.Start.Called = false
+			mc.Recorder.Start.Ctx = nil
+
+			t0 := time.Now()
+			err := mc.Start(t.Context())
+			d := time.Since(t0)
+
+			test.Eq(t, wantD, d)
+			test.ErrorIs(t, err, wantErrIs)
+			test.True(t, mc.Recorder.Start.Called)
+			test.Eq(t, t.Context(), mc.Recorder.Start.Ctx)
+		}
+
+		// Should work normally with no args
+		commonChecks(0, nil)
+
+		// Our different controls should work
+		testErr := errors.New("ooga")
+		hookCalled := false
+		mc.StartOptions.Err = testErr
+		mc.StartOptions.Sleep = 3 * time.Second
+		mc.StartOptions.Hook = func() { hookCalled = true }
+
+		commonChecks(3*time.Second, testErr)
+		test.True(t, hookCalled)
+	})
+}
+
+func TestMockComponent_Shutdown(t *testing.T) {
+	synctest.Run(func() {
+		mc := &MockComponent{}
+		test.False(t, mc.Recorder.Shutdown.Called)
+
+		commonChecks := func(wantD time.Duration, wantErrIs error) {
+			mc.Recorder.Shutdown.Called = false
+			mc.Recorder.Shutdown.Ctx = nil
+
+			t0 := time.Now()
+			err := mc.Shutdown(t.Context())
+			d := time.Since(t0)
+
+			test.Eq(t, wantD, d)
+			test.ErrorIs(t, err, wantErrIs)
+			test.True(t, mc.Recorder.Shutdown.Called)
+			test.Eq(t, t.Context(), mc.Recorder.Shutdown.Ctx)
+		}
+
+		// Should work normally with no args
+		commonChecks(0, nil)
+
+		// Our different controls should work
+		testErr := errors.New("aiph")
+		hookCalled := false
+		mc.ShutdownOptions.Err = testErr
+		mc.ShutdownOptions.Sleep = 3 * time.Second
+		mc.ShutdownOptions.Hook = func() { hookCalled = true }
+
+		commonChecks(3*time.Second, testErr)
+		test.True(t, hookCalled)
+	})
+}
