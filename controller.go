@@ -24,7 +24,7 @@ func (c *Controller) Launch(name string, opts ComponentOption) {
 	if err != nil {
 		panic(fmt.Sprintf("component build failed: %v", err))
 	}
-	c.impl.Launch(comp)
+	c.impl.Launch(name, comp)
 }
 
 func (c *Controller) RequestStop(reason error) {

@@ -20,7 +20,7 @@ func New(context.Context, *slog.Logger) *Controller {
 	return &Controller{}
 }
 
-func (c *Controller) Launch(comp Component)    { panic("NYI") }
-func (c *Controller) RequestStop(reason error) { panic("NYI") }
-func (c *Controller) Wait() error              { panic("NYI") }
-func (c *Controller) Err() error               { panic("NYI") }
+func (c *Controller) Launch(name string, comp Component) { panic("NYI") }
+func (c *Controller) RequestStop(reason error)           { panic("NYI") }
+func (c *Controller) Wait() error                        { panic("NYI") }
+func (c *Controller) Err() error                         { panic("NYI") }
