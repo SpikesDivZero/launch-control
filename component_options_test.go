@@ -92,6 +92,16 @@ func Test_buildComponent(t *testing.T) {
 		test.Eq(t, c.ShutdownOptions.CallTimeout, negD) // our function was called
 	})
 
+	t.Run("happy path, ssw", func(t *testing.T) {
+		c, err := buildComponent("happy2",
+			WithStartStop(
+				func(ctx context.Context) error { return nil },
+				func(ctx context.Context) error { return nil }))
+		test.Nil(t, err)
+		test.NotNil(t, c.ImplRun)
+		test.NotNil(t, c.ImplShutdown)
+	})
+
 	t.Run("missing run style", func(t *testing.T) {
 		c, err := buildComponent("missing run", func(cbs *componentBuildState) {})
 		test.ErrorContains(t, err, "must provide either WithRun or WithStartStop")

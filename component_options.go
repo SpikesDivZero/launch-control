@@ -88,6 +88,11 @@ func buildComponent(name string, opts ...ComponentOption) (*component.Component,
 		}
 	}
 
+	if cbs.c.ImplRun == nil {
+		cbs.c.ImplRun = cbs.ssw.Run
+		cbs.c.ImplShutdown = cbs.ssw.Shutdown
+	}
+
 	if len(cbs.appliedCheckReadyCalls) > 1 {
 		return nil, optionConflictingCallsError{
 			"multiple calls to WithCheckReady; must be zero or one",
