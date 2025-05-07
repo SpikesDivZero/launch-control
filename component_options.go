@@ -10,7 +10,6 @@ import (
 
 	"github.com/spikesdivzero/launch-control/internal/component"
 	"github.com/spikesdivzero/launch-control/internal/debug"
-	ssw "github.com/spikesdivzero/launch-control/internal/start_stop_wrapper"
 )
 
 type optionNilArgError struct{ funcName, argName string }
@@ -42,7 +41,7 @@ func (e optionConflictingCallsError) Error() string {
 
 type componentBuildState struct {
 	c   *component.Component
-	ssw *ssw.StartStopWrapper
+	ssw *component.StartStopWrapper
 
 	// The options pattern leads to the potential for runtime panics. We'll collect the stacks and, if a violation is found,
 	// report them with the call stacks to make it a bit easier for the dev to trace down where it happened.
@@ -65,7 +64,7 @@ func newComponentBuildState(name string) *componentBuildState {
 				MaxAttempts: math.MaxInt,
 			},
 		},
-		ssw: &ssw.StartStopWrapper{
+		ssw: &component.StartStopWrapper{
 			StartTimeout: NoTimeout,
 			StopTimeout:  NoTimeout,
 		},

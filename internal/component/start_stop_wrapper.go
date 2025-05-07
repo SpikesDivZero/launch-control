@@ -1,4 +1,4 @@
-package ssw
+package component
 
 import (
 	"context"
