@@ -58,6 +58,21 @@ func ChanReadIs[T any](t *testing.T, ch <-chan T, wantStatus ChanReadStatus, wan
 	}
 }
 
+func ChanReadIsClosed[T any](t *testing.T, ch <-chan T) {
+	t.Helper()
+	ChanReadIs(t, ch, ChanReadStatusClosed, Zero[T]())
+}
+
+func ChanReadIsBlocked[T any](t *testing.T, ch <-chan T) {
+	t.Helper()
+	ChanReadIs(t, ch, ChanReadStatusBlocked, Zero[T]())
+}
+
+func ChanReadIsOk[T any](t *testing.T, ch <-chan T, wantValue T) {
+	t.Helper()
+	ChanReadIs(t, ch, ChanReadStatusOk, wantValue)
+}
+
 // Returns a channel, along with a closer for that channel.
 // The close function is wrapped with [sync.OnceFunc] so make it safe to call multiple times.
 func ChanWithCloser[T any](cap int) (chan T, func()) {

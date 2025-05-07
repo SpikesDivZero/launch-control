@@ -51,11 +51,11 @@ func TestComponent_Start(t *testing.T) {
 		// Things Start() sets up.
 		must.NotNil(t, c.runCtxCancel)
 		must.NotNil(t, c.doneCh)
-		testutil.ChanReadIs(t, c.doneCh, testutil.ChanReadStatusBlocked, struct{}{})
+		testutil.ChanReadIsBlocked(t, c.doneCh)
 
 		// And our call states
 		test.True(t, calledCheckReadyOnce)
-		testutil.ChanReadIs(t, exitNotifiedCh, testutil.ChanReadStatusBlocked, nil)
+		testutil.ChanReadIsBlocked(t, exitNotifiedCh)
 
 		// Okay, it's started, and we assume the exit monitor has also started up.
 		// Let's see that runCtxCancel works (and that it's piped into ImplRun)
