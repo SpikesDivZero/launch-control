@@ -19,7 +19,7 @@ func TestComponent_waitReady(t *testing.T) {
 	t.Run("no impl", func(t *testing.T) {
 		c := newTestingComponent(t)
 		c.ImplCheckReady = nil
-		err := c.WaitReady(t.Context())
+		err := c.WaitReady(t.Context(), make(chan struct{}))
 		test.Nil(t, err)
 	})
 
@@ -43,7 +43,7 @@ func TestComponent_waitReady(t *testing.T) {
 			calls = append(calls, 'b')
 			return 0
 		}
-		err := c.WaitReady(t.Context())
+		err := c.WaitReady(t.Context(), make(chan struct{}))
 		test.ErrorIs(t, err, nil)
 		test.Eq(t, []byte("cbc"), calls)
 	})
@@ -52,115 +52,147 @@ func TestComponent_waitReady(t *testing.T) {
 func Test_waitReady_MainLoop(t *testing.T) {
 	testErr1 := errors.New("fancy feast")
 
-	type backoffReturn error
-	type checkReturn struct {
-		ready bool
-		error error
+	// The basic check event sequence for the loop is: Ready, Abort, Backoff, Abort
+	//
+	// At the start of each checkReady call, we ask control for what to return this time around.
+	type loopControl struct {
+		Ready      bool
+		ReadyError error
+
+		AbortBeforeBackoff bool
+
+		BackoffError error
+
+		AbortAfterBackoff bool
+
+		isValid bool // Used by the test mock impls
 	}
 
 	tests := []struct {
-		name           string
-		maxAttempts    int
-		checkReturns   []checkReturn
-		backoffReturns []backoffReturn
-		wantError      error
+		name        string
+		maxAttempts int
+		controls    []loopControl
+		wantError   error
 	}{
 		{
 			"ok, attempt 1",
 			-1,
-			[]checkReturn{{true, nil}},
-			[]backoffReturn{},
+			[]loopControl{
+				{Ready: true},
+			},
 			nil,
 		},
 		{
 			"ok, attempt 3",
 			-1,
-			[]checkReturn{{false, nil}, {false, nil}, {true, nil}},
-			[]backoffReturn{nil, nil},
+			[]loopControl{
+				{Ready: false},
+				{Ready: false},
+				{Ready: true},
+			},
 			nil,
 		},
 		{
 			"check says abort",
 			-1,
-			[]checkReturn{{false, testErr1}},
-			[]backoffReturn{},
+			[]loopControl{
+				{ReadyError: testErr1},
+			},
 			testErr1,
 		},
 		{
 			"backoff says abort",
 			-1,
-			[]checkReturn{{false, nil}, {true, nil}},
-			[]backoffReturn{testErr1},
+			[]loopControl{
+				{BackoffError: testErr1},
+			},
 			testErr1,
 		},
 		{
 			"bust max attempts",
 			2,
-			[]checkReturn{{false, nil}, {false, nil}, {true, nil}},
-			[]backoffReturn{nil, nil},
+			[]loopControl{
+				{Ready: false},
+				{Ready: false},
+				{Ready: true},
+			},
 			errWaitReadyExceededMaxAttempts,
+		},
+		{
+			"abort chan closed before backoff",
+			-1,
+			[]loopControl{
+				{Ready: false},
+				{AbortBeforeBackoff: true},
+				{Ready: true},
+			},
+			errWaitReadyAbortChClosed,
+		},
+		{
+			"abort chan closed after backoff",
+			-1,
+			[]loopControl{
+				{Ready: false},
+				{AbortAfterBackoff: true},
+				{Ready: true},
+			},
+			errWaitReadyAbortChClosed,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Dumb mock implementations for the test
-			backoffIdx, checkReadyIdx, nextCall := 0, 0, 'c'
-			mockBackoff := func(ctx context.Context) error {
+			var control loopControl
+			controlIdx, nextCall := 0, 'c'
+			abortLoopCh, closeAbortLoopCh := testutil.ChanWithCloser[struct{}](0)
+
+			mockBackoff := func(ctx context.Context, innerAbortCh <-chan struct{}) error {
 				must.Eq(t, 'b', nextCall)
 				nextCall = 'c'
 
-				must.Less(t, len(tt.backoffReturns), backoffIdx)
-				data := tt.backoffReturns[backoffIdx]
-				backoffIdx++
+				must.True(t, control.isValid) // overrun of control inputs
+				if control.AbortAfterBackoff {
+					closeAbortLoopCh()
+				}
 
 				test.Eq(t, t.Context(), ctx)
-				return data
+				test.Eq(t, abortLoopCh, innerAbortCh)
+				return control.BackoffError
 			}
 			mockCheckReady := func(ctx context.Context) (bool, error) {
 				must.Eq(t, 'c', nextCall)
 				nextCall = 'b'
 
-				must.Less(t, len(tt.checkReturns), checkReadyIdx)
-				data := tt.checkReturns[checkReadyIdx]
-				checkReadyIdx++
+				must.Less(t, len(tt.controls), controlIdx)
+				control = tt.controls[controlIdx]
+				controlIdx++
+				control.isValid = true
+
+				if control.AbortBeforeBackoff {
+					closeAbortLoopCh()
+				}
 
 				test.Eq(t, t.Context(), ctx)
-				return data.ready, data.error
+				return control.Ready, control.ReadyError
 			}
 
 			if tt.maxAttempts == -1 {
-				tt.maxAttempts = len(tt.checkReturns) + 1
+				tt.maxAttempts = len(tt.controls) + 1
 			}
-			err := waitReady_MainLoop(t.Context(), tt.maxAttempts, mockCheckReady, mockBackoff)
+			err := waitReady_MainLoop(t.Context(), abortLoopCh, tt.maxAttempts, mockCheckReady, mockBackoff)
 			test.ErrorIs(t, err, tt.wantError)
 		})
 	}
-
-	/*
-	   for attempt := range maxAttempts {
-	           if attempt > 0 {
-	                   if err := backoff(ctx); err != nil {
-	                           return err
-	                   }
-	           }
-
-	           if ready, err := checkOnce(ctx); ready {
-	                   return nil
-	           } else if err != nil {
-	                   return err
-	           }
-	   }
-	   return errWaitReadyExceededMaxAttempts
-	*/
 }
 
 func TestComponent_waitReady_Backoff(t *testing.T) {
 	testErr := errors.New("test err")
 
 	type testControl struct {
-		cancelCtx context.CancelCauseFunc
-		closeDone func()
+		cancelCtx  context.CancelCauseFunc
+		closeDone  func()
+		closeAbort func()
 	}
 
 	type want struct {
@@ -210,6 +242,15 @@ func TestComponent_waitReady_Backoff(t *testing.T) {
 			},
 			want{errWaitReadyComponentExited, 2 * time.Second},
 		},
+		{
+			"interrupt: abort",
+			5 * time.Second,
+			func(tc testControl) {
+				time.Sleep(3 * time.Second)
+				tc.closeAbort()
+			},
+			want{errWaitReadyAbortChClosed, 3 * time.Second},
+		},
 	}
 
 	for _, tt := range tests {
@@ -226,13 +267,16 @@ func TestComponent_waitReady_Backoff(t *testing.T) {
 
 				c.doneCh, tc.closeDone = testutil.ChanWithCloser[struct{}](0)
 
+				var abortCh chan struct{}
+				abortCh, tc.closeAbort = testutil.ChanWithCloser[struct{}](0)
+
 				if tt.control != nil {
 					go tt.control(tc)
 					synctest.Wait()
 				}
 
 				t0 := time.Now()
-				err := c.waitReady_Backoff(ctx)
+				err := c.waitReady_Backoff(ctx, abortCh)
 				test.ErrorIs(t, err, tt.want.err)
 				test.Eq(t, tt.want.d, time.Since(t0))
 			})

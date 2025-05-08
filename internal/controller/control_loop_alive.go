@@ -43,16 +43,12 @@ func (c *Controller) clAliveDoLaunch(req launchRequest) {
 	c.components = append(c.components, req.comp)
 	c.stateMu.Unlock()
 
-	// TODO: How should I handle the case where a request to stop comes in while the component is starting up?
-	// For now, I'm leaving it purposefully undefined, but I can absolutely see a case where it stalls out if
-	// the user has no call timeout/no max attempts on the wait ready stage.
-
 	if err := req.comp.Start(c.ctx); err != nil {
 		c.RequestStop(fmt.Errorf("component %v startup failed: %w", req.name, err))
 		return
 	}
 
-	if err := req.comp.WaitReady(c.ctx); err != nil {
+	if err := req.comp.WaitReady(c.ctx, c.requestStopCh); err != nil {
 		c.RequestStop(fmt.Errorf("component %v failed to become ready: %w", req.name, err))
 	}
 }

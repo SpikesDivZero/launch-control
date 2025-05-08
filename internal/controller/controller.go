@@ -12,9 +12,9 @@ type Component interface {
 		log *slog.Logger,
 		notifyOnExited func(error),
 	)
-	Start(context.Context) error
-	Shutdown(context.Context) error
-	WaitReady(context.Context) error
+	Start(ctx context.Context) error
+	Shutdown(ctx context.Context) error
+	WaitReady(ctx context.Context, abortLoopCh <-chan struct{}) error
 }
 
 type Controller struct {

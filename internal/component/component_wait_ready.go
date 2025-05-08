@@ -10,13 +10,16 @@ var errWaitReadyComponentExited = errors.New("during waitReady: component exited
 
 var errWaitReadyExceededMaxAttempts = errors.New("component did not become ready within MaxAttempts")
 
-func (c *Component) WaitReady(ctx context.Context) error {
+var errWaitReadyAbortChClosed = errors.New("during waitReady: abort requested")
+
+func (c *Component) WaitReady(ctx context.Context, abortCh <-chan struct{}) error {
 	if c.ImplCheckReady == nil {
 		return nil
 	}
 
 	return waitReady_MainLoop(
 		ctx,
+		abortCh,
 		c.CheckReadyOptions.MaxAttempts,
 		c.waitReady_CheckOnce,
 		c.waitReady_Backoff,
@@ -25,13 +28,30 @@ func (c *Component) WaitReady(ctx context.Context) error {
 
 func waitReady_MainLoop(
 	ctx context.Context,
+	abortCh <-chan struct{},
 	maxAttempts int,
 	checkOnce func(context.Context) (bool, error),
-	backoff func(context.Context) error,
+	backoff func(context.Context, <-chan struct{}) error,
 ) error {
+	shouldAbort := func() error {
+		select {
+		case <-abortCh:
+			return errWaitReadyAbortChClosed
+		default:
+			return nil
+		}
+	}
+
 	for attempt := range maxAttempts {
+		if err := shouldAbort(); err != nil {
+			return err
+		}
+
 		if attempt > 0 {
-			if err := backoff(ctx); err != nil {
+			if err := backoff(ctx, abortCh); err != nil {
+				return err
+			}
+			if err := shouldAbort(); err != nil {
 				return err
 			}
 		}
@@ -45,7 +65,7 @@ func waitReady_MainLoop(
 	return errWaitReadyExceededMaxAttempts
 }
 
-func (c *Component) waitReady_Backoff(ctx context.Context) error {
+func (c *Component) waitReady_Backoff(ctx context.Context, abortCh <-chan struct{}) error {
 	d := c.CheckReadyOptions.Backoff()
 	if d <= 0 {
 		return nil
@@ -54,6 +74,8 @@ func (c *Component) waitReady_Backoff(ctx context.Context) error {
 	select {
 	case <-time.After(d):
 		return nil
+	case <-abortCh:
+		return errWaitReadyAbortChClosed
 	case <-ctx.Done():
 		return context.Cause(ctx)
 	case <-c.doneCh:

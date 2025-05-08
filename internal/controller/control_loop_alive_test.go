@@ -77,6 +77,8 @@ func TestController_clAliveDoLaunch(t *testing.T) {
 		test.Len(t, 1, c.components)
 		test.Eq(t, mc, c.components[0].(*testutil.MockComponent))
 
+		test.Eq(t, c.requestStopCh, mc.Recorder.WaitReady.AbortLoopCh)
+
 		testutil.ChanReadIsBlocked(t, c.requestStopCh) // no stop requested
 	})
 

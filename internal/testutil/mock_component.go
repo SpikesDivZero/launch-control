@@ -44,8 +44,9 @@ type MockComponent struct {
 			Ctx    context.Context
 		}
 		WaitReady struct {
-			Called bool
-			Ctx    context.Context
+			Called      bool
+			Ctx         context.Context
+			AbortLoopCh <-chan struct{}
 		}
 	}
 }
@@ -84,10 +85,11 @@ func (mc *MockComponent) Shutdown(ctx context.Context) error {
 	return mc.ShutdownOptions.Err
 }
 
-func (mc *MockComponent) WaitReady(ctx context.Context) error {
+func (mc *MockComponent) WaitReady(ctx context.Context, abortLoopCh <-chan struct{}) error {
 	rc := &mc.Recorder.WaitReady
 	rc.Called = true
 	rc.Ctx = ctx
+	rc.AbortLoopCh = abortLoopCh
 
 	if hook := mc.WaitReadyOptions.Hook; hook != nil {
 		hook()
