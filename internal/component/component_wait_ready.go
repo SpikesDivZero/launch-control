@@ -10,7 +10,7 @@ var errWaitReadyComponentExited = errors.New("during waitReady: component exited
 
 var errWaitReadyExceededMaxAttempts = errors.New("component did not become ready within MaxAttempts")
 
-func (c *Component) waitReady(ctx context.Context) error {
+func (c *Component) WaitReady(ctx context.Context) error {
 	if c.ImplCheckReady == nil {
 		return nil
 	}

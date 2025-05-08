@@ -23,6 +23,12 @@ type MockComponent struct {
 		Err   error
 	}
 
+	WaitReadyOptions struct {
+		Hook  func()
+		Sleep time.Duration
+		Err   error
+	}
+
 	Recorder struct {
 		Connect struct {
 			Called         bool
@@ -34,6 +40,10 @@ type MockComponent struct {
 			Ctx    context.Context
 		}
 		Shutdown struct {
+			Called bool
+			Ctx    context.Context
+		}
+		WaitReady struct {
 			Called bool
 			Ctx    context.Context
 		}
@@ -72,4 +82,16 @@ func (mc *MockComponent) Shutdown(ctx context.Context) error {
 	}
 	time.Sleep(mc.ShutdownOptions.Sleep)
 	return mc.ShutdownOptions.Err
+}
+
+func (mc *MockComponent) WaitReady(ctx context.Context) error {
+	rc := &mc.Recorder.WaitReady
+	rc.Called = true
+	rc.Ctx = ctx
+
+	if hook := mc.WaitReadyOptions.Hook; hook != nil {
+		hook()
+	}
+	time.Sleep(mc.WaitReadyOptions.Sleep)
+	return mc.WaitReadyOptions.Err
 }

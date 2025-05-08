@@ -14,6 +14,7 @@ type Component interface {
 	)
 	Start(context.Context) error
 	Shutdown(context.Context) error
+	WaitReady(context.Context) error
 }
 
 type Controller struct {

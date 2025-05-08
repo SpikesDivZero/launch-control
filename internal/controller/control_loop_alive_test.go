@@ -73,6 +73,7 @@ func TestController_clAliveDoLaunch(t *testing.T) {
 		c.clAliveDoLaunch(req)
 		testutil.ChanReadIsClosed(t, req.doneCh)
 		test.True(t, mc.Recorder.Start.Called)
+		test.True(t, mc.Recorder.WaitReady.Called)
 		test.Len(t, 1, c.components)
 		test.Eq(t, mc, c.components[0].(*testutil.MockComponent))
 
@@ -89,6 +90,25 @@ func TestController_clAliveDoLaunch(t *testing.T) {
 		c.clAliveDoLaunch(req)
 		testutil.ChanReadIsClosed(t, req.doneCh)
 		test.True(t, mc.Recorder.Start.Called)
+		test.False(t, mc.Recorder.WaitReady.Called)
+		test.Len(t, 1, c.components)
+		test.Eq(t, mc, c.components[0].(*testutil.MockComponent))
+
+		testutil.ChanReadIsClosed(t, c.requestStopCh)
+		test.ErrorIs(t, c.firstError, testErr)
+	})
+
+	t.Run("wait-ready returns error", func(t *testing.T) {
+		c := newTestingController(t, lifecycleAlive)
+		mc, req := makeReq()
+
+		testErr := errors.New("shoes")
+		mc.WaitReadyOptions.Err = testErr
+
+		c.clAliveDoLaunch(req)
+		testutil.ChanReadIsClosed(t, req.doneCh)
+		test.True(t, mc.Recorder.Start.Called)
+		test.True(t, mc.Recorder.WaitReady.Called)
 		test.Len(t, 1, c.components)
 		test.Eq(t, mc, c.components[0].(*testutil.MockComponent))
 

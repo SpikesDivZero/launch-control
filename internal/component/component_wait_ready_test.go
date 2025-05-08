@@ -19,7 +19,7 @@ func TestComponent_waitReady(t *testing.T) {
 	t.Run("no impl", func(t *testing.T) {
 		c := newTestingComponent(t)
 		c.ImplCheckReady = nil
-		err := c.waitReady(t.Context())
+		err := c.WaitReady(t.Context())
 		test.Nil(t, err)
 	})
 
@@ -43,7 +43,7 @@ func TestComponent_waitReady(t *testing.T) {
 			calls = append(calls, 'b')
 			return 0
 		}
-		err := c.waitReady(t.Context())
+		err := c.WaitReady(t.Context())
 		test.ErrorIs(t, err, nil)
 		test.Eq(t, []byte("cbc"), calls)
 	})

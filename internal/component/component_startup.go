@@ -2,7 +2,6 @@ package component
 
 import (
 	"context"
-	"fmt"
 	"time"
 )
 
@@ -29,9 +28,6 @@ func (c *Component) Start(ctx context.Context) error {
 
 	go c.monitorExit(ctx, runErrCh)
 
-	if err := c.waitReady(ctx); err != nil {
-		return fmt.Errorf("failed to become ready: %w", err)
-	}
 	return nil
 }
 

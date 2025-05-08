@@ -36,12 +36,6 @@ func TestComponent_Start(t *testing.T) {
 			close(exitNotifiedCh)
 		}
 
-		calledCheckReadyOnce := false
-		c.ImplCheckReady = func(ctx context.Context) (bool, error) {
-			calledCheckReadyOnce = true
-			return true, nil
-		}
-
 		ctx, cancel := context.WithCancelCause(t.Context())
 		defer cancel(errors.New("test ended"))
 
@@ -53,8 +47,7 @@ func TestComponent_Start(t *testing.T) {
 		must.NotNil(t, c.doneCh)
 		testutil.ChanReadIsBlocked(t, c.doneCh)
 
-		// And our call states
-		test.True(t, calledCheckReadyOnce)
+		// And our call state
 		testutil.ChanReadIsBlocked(t, exitNotifiedCh)
 
 		// Okay, it's started, and we assume the exit monitor has also started up.
@@ -87,24 +80,6 @@ func TestComponent_Start(t *testing.T) {
 		c := newTestingComponent(t)
 		c.doneCh = make(chan struct{})
 		_ = c.Start(t.Context())
-	})
-
-	t.Run("waitReady error result handling", func(t *testing.T) {
-		c := newTestingComponent(t)
-
-		c.ImplRun = func(ctx context.Context) error {
-			<-ctx.Done()
-			return nil
-		}
-		c.notifyOnExited = func(err error) {}
-
-		c.CheckReadyOptions.MaxAttempts = 1
-		c.ImplCheckReady = func(ctx context.Context) (bool, error) {
-			return false, nil
-		}
-
-		err := c.Start(t.Context())
-		test.ErrorContains(t, err, "failed to become ready: ")
 	})
 }
 
