@@ -102,6 +102,11 @@ func Test_buildComponent(t *testing.T) {
 		test.NotNil(t, c.ImplShutdown)
 	})
 
+	t.Run("name required", func(t *testing.T) {
+		_, err := buildComponent("")
+		test.ErrorContains(t, err, "name must not be empty")
+	})
+
 	t.Run("missing run style", func(t *testing.T) {
 		c, err := buildComponent("missing run", func(cbs *componentBuildState) {})
 		test.ErrorContains(t, err, "must provide either WithRun or WithStartStop")

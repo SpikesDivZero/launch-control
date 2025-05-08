@@ -72,6 +72,10 @@ func newComponentBuildState(name string) *componentBuildState {
 }
 
 func buildComponent(name string, opts ...ComponentOption) (*component.Component, error) {
+	if name == "" {
+		return nil, errors.New("name must not be empty")
+	}
+
 	cbs := newComponentBuildState(name)
 	for _, opt := range opts {
 		opt(cbs)
