@@ -72,7 +72,7 @@ func TestController_Launch(t *testing.T) {
 		// Check to see that it was connected
 		test.True(t, mc.Recorder.Connect.Called)
 		test.Eq(t, c.log, mc.Recorder.Connect.Log)
-		test.NotNil(t, mc.Recorder.Connect.NotifyOnExited) // TODO: extend testing on this?
+		test.NotNil(t, mc.Recorder.Connect.NotifyOnExited) // Impl validated in TestController_Launch_notifyOnExit
 
 		select {
 		case req := <-c.requestLaunchCh:
@@ -84,6 +84,39 @@ func TestController_Launch(t *testing.T) {
 
 		synctest.Wait()
 		testutil.ChanReadIsClosed(t, launchDone)
+	})
+}
+
+func TestController_Launch_notifyOnExit(t *testing.T) {
+	t.Run("gets nil error", func(t *testing.T) {
+		c := newTestingController(t, lifecycleAlive)
+		mc := &testutil.MockComponent{}
+
+		go func() {
+			req := <-c.requestLaunchCh
+			close(req.doneCh)
+		}()
+		c.Launch("test", mc)
+
+		mc.Recorder.Connect.NotifyOnExited(nil)
+		testutil.ChanReadIsClosed(t, c.requestStopCh) // called RequestShutdown
+		test.Nil(t, c.firstError)
+	})
+
+	t.Run("gets error", func(t *testing.T) {
+		c := newTestingController(t, lifecycleAlive)
+		mc := &testutil.MockComponent{}
+
+		go func() {
+			req := <-c.requestLaunchCh
+			close(req.doneCh)
+		}()
+		c.Launch("test", mc)
+
+		err := errors.New("anything")
+		mc.Recorder.Connect.NotifyOnExited(err)
+		testutil.ChanReadIsClosed(t, c.requestStopCh) // called RequestShutdown
+		test.ErrorIs(t, c.firstError, err)
 	})
 }
 
