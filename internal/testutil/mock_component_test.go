@@ -16,14 +16,27 @@ func TestMockComponent_ConnectController(t *testing.T) {
 	var testNotifyGot error
 	testNotify := func(err error) { testNotifyGot = err }
 
+	var testLogErrorGot struct {
+		stage string
+		err   error
+	}
+	testLogError := func(stage string, err error) {
+		testLogErrorGot.stage = stage
+		testLogErrorGot.err = err
+	}
+
 	log := slog.New(slog.DiscardHandler)
 
 	mc := &MockComponent{}
-	mc.ConnectController(log, testNotify)
+	mc.ConnectController(log, testLogError, testNotify)
 
 	testErr := errors.New("boop")
 	mc.Recorder.Connect.NotifyOnExited(testErr)
 	test.ErrorIs(t, testNotifyGot, testErr)
+
+	mc.Recorder.Connect.LogError("in-test", testErr)
+	test.Eq(t, testLogErrorGot.stage, "in-test")
+	test.ErrorIs(t, testLogErrorGot.err, testErr)
 
 	test.Eq(t, log, mc.Recorder.Connect.Log)
 }

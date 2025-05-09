@@ -12,6 +12,7 @@ import (
 	"github.com/shoenig/test"
 	"github.com/shoenig/test/must"
 	"github.com/spikesdivzero/launch-control/internal/testutil"
+	launchErrors "github.com/spikesdivzero/launch-control/launch-errors"
 )
 
 func newTestingController(t *testing.T, initialState lifecycleState) *Controller {
@@ -87,6 +88,37 @@ func TestController_Launch(t *testing.T) {
 	})
 }
 
+func TestController_Launch_logError(t *testing.T) {
+	t.Run("gets nil error", func(t *testing.T) {
+		c := newTestingController(t, lifecycleAlive)
+		mc := &testutil.MockComponent{}
+
+		go func() {
+			req := <-c.requestLaunchCh
+			close(req.doneCh)
+		}()
+		c.Launch("test", mc)
+
+		mc.Recorder.Connect.LogError("test", nil)
+		test.NoError(t, c.Err())
+	})
+
+	t.Run("gets error", func(t *testing.T) {
+		c := newTestingController(t, lifecycleAlive)
+		mc := &testutil.MockComponent{}
+
+		go func() {
+			req := <-c.requestLaunchCh
+			close(req.doneCh)
+		}()
+		c.Launch("test", mc)
+
+		err := errors.New("anything")
+		mc.Recorder.Connect.NotifyOnExited(err)
+		test.ErrorIs(t, c.Err(), err)
+	})
+}
+
 func TestController_Launch_notifyOnExit(t *testing.T) {
 	t.Run("gets nil error", func(t *testing.T) {
 		c := newTestingController(t, lifecycleAlive)
@@ -100,7 +132,7 @@ func TestController_Launch_notifyOnExit(t *testing.T) {
 
 		mc.Recorder.Connect.NotifyOnExited(nil)
 		testutil.ChanReadIsClosed(t, c.requestStopCh) // called RequestShutdown
-		test.Nil(t, c.firstError)
+		test.NoError(t, c.Err())
 	})
 
 	t.Run("gets error", func(t *testing.T) {
@@ -116,7 +148,38 @@ func TestController_Launch_notifyOnExit(t *testing.T) {
 		err := errors.New("anything")
 		mc.Recorder.Connect.NotifyOnExited(err)
 		testutil.ChanReadIsClosed(t, c.requestStopCh) // called RequestShutdown
-		test.ErrorIs(t, c.firstError, err)
+		test.ErrorIs(t, c.Err(), err)
+	})
+}
+
+func TestController_recordComponentError(t *testing.T) {
+	t.Run("nil error", func(t *testing.T) {
+		c := newTestingController(t, lifecycleAlive)
+		c.recordComponentError("foo", "bar", nil)
+
+		test.Len(t, 0, c.allErrors)
+	})
+
+	t.Run("gets error", func(t *testing.T) {
+		c := newTestingController(t, lifecycleAlive)
+
+		firstErr := errors.New("fancy")
+		c.recordComponentError("foo", "bar", firstErr)
+		must.Len(t, 1, c.allErrors)
+		test.ErrorIs(t, c.allErrors[0], launchErrors.ComponentError{
+			Name:  "foo",
+			Stage: "bar",
+			Err:   firstErr,
+		})
+
+		secondErr := errors.New("fancy")
+		c.recordComponentError("jazz", "hands", secondErr)
+		must.Len(t, 2, c.allErrors)
+		test.ErrorIs(t, c.allErrors[1], launchErrors.ComponentError{
+			Name:  "jazz",
+			Stage: "hands",
+			Err:   secondErr,
+		})
 	})
 }
 
@@ -187,7 +250,7 @@ func TestController_RequestStop(t *testing.T) {
 	t.Run("from Alive", func(t *testing.T) {
 		c := newTestingController(t, lifecycleAlive)
 		check := func(wantErrIs error) {
-			test.ErrorIs(t, c.firstError, wantErrIs)
+			test.ErrorIs(t, c.Err(), wantErrIs)
 
 			test.Eq(t, lifecycleAlive, c.lifecycleState)
 			testutil.ChanReadIsClosed(t, c.requestStopCh)
@@ -214,7 +277,7 @@ func TestController_RequestStop(t *testing.T) {
 	t.Run("New-Dead skip transition", func(t *testing.T) {
 		c := newTestingController(t, lifecycleNew)
 		check := func(wantErrIs error) {
-			test.ErrorIs(t, c.firstError, wantErrIs)
+			test.ErrorIs(t, c.Err(), wantErrIs)
 
 			test.Eq(t, lifecycleDead, c.lifecycleState)
 			testutil.ChanReadIsClosed(t, c.requestStopCh)
@@ -253,7 +316,7 @@ func TestController_Wait(t *testing.T) {
 		testutil.ChanReadIsBlocked(t, resultCh)
 
 		testErr := errors.New("hello")
-		c.firstError = testErr
+		c.allErrors = append(c.allErrors, testErr)
 		close(c.doneCh)
 
 		synctest.Wait()
@@ -266,6 +329,20 @@ func TestController_Err(t *testing.T) {
 	test.Nil(t, c.Err())
 
 	testErr := errors.New("testy")
-	c.firstError = testErr
+	c.allErrors = append(c.allErrors, testErr, errors.New("something else"))
 	test.ErrorIs(t, c.Err(), testErr)
+}
+
+func TestController_AllErrors(t *testing.T) {
+	c := newTestingController(t, lifecycleNew)
+	test.Nil(t, c.AllErrors())
+
+	c.allErrors = append(c.allErrors, errors.New("first"), errors.New("second"))
+
+	got := c.AllErrors()
+	test.SliceEqOp(t, c.allErrors, got)
+
+	// We return a copy so the user can't modify our internal state.
+	got[0] = errors.New("different")
+	test.NotEqOp(t, c.allErrors[0], got[0])
 }

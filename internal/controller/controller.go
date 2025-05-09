@@ -2,14 +2,17 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
+	"slices"
 	"sync"
+
+	launchErrors "github.com/spikesdivzero/launch-control/launch-errors"
 )
 
 type Component interface {
 	ConnectController(
 		log *slog.Logger,
+		logError func(string, error),
 		notifyOnExited func(error),
 	)
 	Start(ctx context.Context) error
@@ -27,7 +30,7 @@ type Controller struct {
 	doneCh          chan struct{}
 	requestStopCh   chan struct{}
 	requestLaunchCh chan launchRequest
-	firstError      error
+	allErrors       []error
 	components      []Component
 }
 
@@ -44,14 +47,28 @@ func New(ctx context.Context, log *slog.Logger) *Controller {
 }
 
 func (c *Controller) Launch(name string, comp Component) {
-	comp.ConnectController(c.log, func(err error) {
-		if err != nil {
-			err = fmt.Errorf("component %v run exited: %w", name, err)
-		}
-		c.RequestStop(err)
-	})
+	comp.ConnectController(c.log,
+		func(stage string, err error) {
+			c.recordComponentError(name, stage, err)
+		},
+		func(err error) {
+			c.recordComponentError(name, "run exited", err)
+			c.RequestStop(nil)
+		})
 
 	<-c.sendLaunchRequest(name, comp)
+}
+
+func (c *Controller) recordComponentError(name, stage string, err error) {
+	if err == nil {
+		return
+	}
+	err = launchErrors.ComponentError{Name: name, Stage: stage, Err: err}
+
+	c.stateMu.Lock()
+	defer c.stateMu.Unlock()
+
+	c.allErrors = append(c.allErrors, err)
 }
 
 // Split out so that the lock boundary is clearly defined.
@@ -86,8 +103,8 @@ func (c *Controller) RequestStop(reason error) {
 	// RequestStop can be called multiple times.
 
 	// We record the first error we see across all these calls, even if another stop request is already processed.
-	if c.firstError == nil {
-		c.firstError = reason
+	if reason != nil {
+		c.allErrors = append(c.allErrors, reason)
 	}
 
 	// We shouldn't panic on a second call.
@@ -116,5 +133,15 @@ func (c *Controller) Err() error {
 	c.stateMu.Lock()
 	defer c.stateMu.Unlock()
 
-	return c.firstError
+	if len(c.allErrors) > 0 {
+		return c.allErrors[0]
+	}
+	return nil
+}
+
+func (c *Controller) AllErrors() []error {
+	c.stateMu.Lock()
+	defer c.stateMu.Unlock()
+
+	return slices.Clone(c.allErrors)
 }

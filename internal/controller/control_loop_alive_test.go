@@ -97,7 +97,7 @@ func TestController_clAliveDoLaunch(t *testing.T) {
 		test.Eq(t, mc, c.components[0].(*testutil.MockComponent))
 
 		testutil.ChanReadIsClosed(t, c.requestStopCh)
-		test.ErrorIs(t, c.firstError, testErr)
+		test.ErrorIs(t, c.Err(), testErr)
 	})
 
 	t.Run("wait-ready returns error", func(t *testing.T) {
@@ -115,6 +115,6 @@ func TestController_clAliveDoLaunch(t *testing.T) {
 		test.Eq(t, mc, c.components[0].(*testutil.MockComponent))
 
 		testutil.ChanReadIsClosed(t, c.requestStopCh)
-		test.ErrorIs(t, c.firstError, testErr)
+		test.ErrorIs(t, c.Err(), testErr)
 	})
 }

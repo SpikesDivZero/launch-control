@@ -6,11 +6,11 @@ import (
 	"time"
 )
 
-var errWaitReadyComponentExited = errors.New("during waitReady: component exited")
-
-var errWaitReadyExceededMaxAttempts = errors.New("component did not become ready within MaxAttempts")
-
-var errWaitReadyAbortChClosed = errors.New("during waitReady: abort requested")
+var (
+	errWaitReadyComponentExited     = errors.New("component exited")
+	errWaitReadyExceededMaxAttempts = errors.New("did not become ready within MaxAttempts")
+	errWaitReadyAbortChClosed       = errors.New("abort requested")
+)
 
 func (c *Component) WaitReady(ctx context.Context, abortCh <-chan struct{}) error {
 	if c.ImplCheckReady == nil {
@@ -102,7 +102,7 @@ func (c *Component) waitReady_CheckOnce(ctx context.Context) (bool, error) {
 			return true
 		}
 		if err != nil {
-			c.logError("WaitReady", err)
+			c.logError("wait-ready", err)
 		}
 		return false
 	})

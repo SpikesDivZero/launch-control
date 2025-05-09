@@ -52,15 +52,15 @@ func (c *Component) shutdownViaImpl(ctx context.Context) {
 	// FIXME: use a call grace timeout provided by controller, instead of const 100ms?
 	resultCh := AsyncCall(ctx, c.ShutdownOptions.CallTimeout, 100*time.Millisecond, c.ImplShutdown)
 	if userErr, callErr := (<-resultCh).Values(); callErr != nil {
-		c.logError("ShutdownViaImpl", callErr)
+		c.logError("shutdown (impl)", callErr)
 	} else if userErr != nil {
-		c.logError("ShutdownViaImpl", userErr)
+		c.logError("shutdown (impl)", userErr)
 	}
 
 	select {
 	case <-ctx.Done():
 		// CompletionTimeout expired.
-		c.logError("ShutdownViaImpl", context.Cause(ctx))
+		c.logError("shutdown (impl)", context.Cause(ctx))
 	case <-c.doneCh:
 		// ImplRun finished.
 	}
@@ -79,6 +79,6 @@ func (c *Component) shutdownViaContext(context.Context) {
 	case <-c.doneCh:
 		// Responded successfully, and is now exited
 	case <-time.After(100 * time.Millisecond): // FIXME: time provided by controller?
-		c.logError("ShutdownViaContext", errors.New("ImplRun did not respond to shutdown via ctx cancellation; abandoning it"))
+		c.logError("shutdown (ctx)", errors.New("did not respond to shutdown via ctx cancellation; abandoning it"))
 	}
 }

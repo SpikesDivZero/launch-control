@@ -42,6 +42,9 @@ func TestComponent_Shutdown(t *testing.T) {
 					}
 				}
 
+				// TODO: should we check this?
+				c.logError = func(string, error) {}
+
 				err := c.Shutdown(ctx)
 				test.Eq(t, []string{"ImplShutdown", "runCtxCancel"}, calls)
 				if wantErr {
@@ -150,6 +153,9 @@ func TestComponent_shutdownViaImpl(t *testing.T) {
 					return tt.shutdown.err
 				}
 
+				// TODO: should we check this?
+				c.logError = func(string, error) {}
+
 				if tt.control != nil {
 					go tt.control(ctrl)
 					synctest.Wait()
@@ -207,6 +213,9 @@ func TestComponent_shutdownViaContext(t *testing.T) {
 				c.runCtxCancel = func() {
 					calledRunCtxCancel = true
 				}
+
+				// TODO: should we check this?
+				c.logError = func(string, error) {}
 
 				ctx, cancel := context.WithCancelCause(t.Context())
 				defer cancel(errors.New("test done"))

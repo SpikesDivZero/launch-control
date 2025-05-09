@@ -59,3 +59,7 @@ func (c *Controller) Wait() error {
 func (c *Controller) Err() error {
 	return c.impl.Err()
 }
+
+func (c *Controller) AllErrors() []error {
+	return c.impl.AllErrors()
+}

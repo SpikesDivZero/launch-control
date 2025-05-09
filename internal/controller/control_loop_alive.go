@@ -1,7 +1,5 @@
 package controller
 
-import "fmt"
-
 // The contents of this file run when lifecycleState is lifecycleAlive.
 //
 // I've split it into different files based on stages both for consistency with the component code,
@@ -44,11 +42,13 @@ func (c *Controller) clAliveDoLaunch(req launchRequest) {
 	c.stateMu.Unlock()
 
 	if err := req.comp.Start(c.ctx); err != nil {
-		c.RequestStop(fmt.Errorf("component %v startup failed: %w", req.name, err))
+		c.recordComponentError(req.name, "startup", err)
+		c.RequestStop(nil)
 		return
 	}
 
 	if err := req.comp.WaitReady(c.ctx, c.requestStopCh); err != nil {
-		c.RequestStop(fmt.Errorf("component %v failed to become ready: %w", req.name, err))
+		c.recordComponentError(req.name, "wait-ready", err)
+		c.RequestStop(nil)
 	}
 }

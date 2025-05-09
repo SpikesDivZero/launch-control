@@ -30,6 +30,7 @@ type Component struct {
 
 	// Values provided by by [ConnectController]
 	log            *slog.Logger
+	logError       func(stage string, err error)
 	notifyOnExited func(error)
 
 	// Lifecycle-related state, created in [Start]
@@ -39,12 +40,10 @@ type Component struct {
 
 func (c *Component) ConnectController(
 	log *slog.Logger,
+	logError func(stage string, err error),
 	notifyOnExited func(error),
 ) {
 	c.log = log
+	c.logError = logError
 	c.notifyOnExited = notifyOnExited
-}
-
-func (c *Component) logError(in string, err error) {
-	c.log.Error("Component returned an error", "stage", in, "err", err)
 }
