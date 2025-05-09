@@ -108,3 +108,42 @@ func TestMockComponent_Shutdown(t *testing.T) {
 		test.True(t, hookCalled)
 	})
 }
+
+func TestMockComponent_WaitReady(t *testing.T) {
+	synctest.Run(func() {
+		mc := &MockComponent{}
+		test.False(t, mc.Recorder.WaitReady.Called)
+
+		commonChecks := func(wantD time.Duration, wantErrIs error) {
+			mc.Recorder.WaitReady.Called = false
+			mc.Recorder.WaitReady.Ctx = nil
+			mc.Recorder.WaitReady.AbortLoopCh = nil
+
+			abortLoopCh := make(chan struct{})
+
+			t0 := time.Now()
+			err := mc.WaitReady(t.Context(), abortLoopCh)
+			d := time.Since(t0)
+
+			test.Eq(t, wantD, d)
+			test.ErrorIs(t, err, wantErrIs)
+
+			test.True(t, mc.Recorder.WaitReady.Called)
+			test.Eq(t, t.Context(), mc.Recorder.WaitReady.Ctx)
+			test.Eq(t, abortLoopCh, mc.Recorder.WaitReady.AbortLoopCh)
+		}
+
+		// Should work normally with no args
+		commonChecks(0, nil)
+
+		// Our different controls should work
+		testErr := errors.New("bleh")
+		hookCalled := false
+		mc.WaitReadyOptions.Err = testErr
+		mc.WaitReadyOptions.Sleep = 4 * time.Second
+		mc.WaitReadyOptions.Hook = func() { hookCalled = true }
+
+		commonChecks(4*time.Second, testErr)
+		test.True(t, hookCalled)
+	})
+}
