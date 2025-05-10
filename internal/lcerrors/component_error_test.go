@@ -1,4 +1,4 @@
-package launchErrors
+package lcerrors
 
 import (
 	"errors"

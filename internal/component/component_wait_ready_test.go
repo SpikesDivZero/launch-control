@@ -11,6 +11,7 @@ import (
 
 	"github.com/shoenig/test"
 	"github.com/shoenig/test/must"
+	"github.com/spikesdivzero/launch-control/internal/lcerrors"
 	"github.com/spikesdivzero/launch-control/internal/testutil"
 )
 
@@ -116,7 +117,7 @@ func Test_waitReady_MainLoop(t *testing.T) {
 				{Ready: false},
 				{Ready: true},
 			},
-			errWaitReadyExceededMaxAttempts,
+			lcerrors.ErrWaitReadyExceededMaxAttempts,
 		},
 		{
 			"abort chan closed before backoff",
@@ -126,7 +127,7 @@ func Test_waitReady_MainLoop(t *testing.T) {
 				{AbortBeforeBackoff: true},
 				{Ready: true},
 			},
-			errWaitReadyAbortChClosed,
+			lcerrors.ErrWaitReadyAbortChClosed,
 		},
 		{
 			"abort chan closed after backoff",
@@ -136,7 +137,7 @@ func Test_waitReady_MainLoop(t *testing.T) {
 				{AbortAfterBackoff: true},
 				{Ready: true},
 			},
-			errWaitReadyAbortChClosed,
+			lcerrors.ErrWaitReadyAbortChClosed,
 		},
 	}
 
@@ -240,7 +241,7 @@ func TestComponent_waitReady_Backoff(t *testing.T) {
 				time.Sleep(2 * time.Second)
 				tc.closeDone()
 			},
-			want{errWaitReadyComponentExited, 2 * time.Second},
+			want{lcerrors.ErrWaitReadyComponentExited, 2 * time.Second},
 		},
 		{
 			"interrupt: abort",
@@ -249,7 +250,7 @@ func TestComponent_waitReady_Backoff(t *testing.T) {
 				time.Sleep(3 * time.Second)
 				tc.closeAbort()
 			},
-			want{errWaitReadyAbortChClosed, 3 * time.Second},
+			want{lcerrors.ErrWaitReadyAbortChClosed, 3 * time.Second},
 		},
 	}
 
@@ -316,7 +317,7 @@ func TestComponent_waitReady_CheckOnce(t *testing.T) {
 				tc.c.ImplCheckReady = func(ctx context.Context) (bool, error) { panic("should not be called") }
 			},
 			checkReturn{}, // unused
-			wantResult{false, errWaitReadyComponentExited, 0},
+			wantResult{false, lcerrors.ErrWaitReadyComponentExited, 0},
 		},
 		{
 			"good call, result=true, no err",
@@ -351,7 +352,7 @@ func TestComponent_waitReady_CheckOnce(t *testing.T) {
 				tc.closeDone()
 			},
 			checkReturn{true, nil, 2 * time.Second},
-			wantResult{false, errWaitReadyComponentExited, time.Second},
+			wantResult{false, lcerrors.ErrWaitReadyComponentExited, time.Second},
 		},
 	}
 

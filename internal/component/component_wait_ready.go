@@ -2,14 +2,9 @@ package component
 
 import (
 	"context"
-	"errors"
 	"time"
-)
 
-var (
-	errWaitReadyComponentExited     = errors.New("component exited")
-	errWaitReadyExceededMaxAttempts = errors.New("did not become ready within MaxAttempts")
-	errWaitReadyAbortChClosed       = errors.New("abort requested")
+	"github.com/spikesdivzero/launch-control/internal/lcerrors"
 )
 
 func (c *Component) WaitReady(ctx context.Context, abortCh <-chan struct{}) error {
@@ -36,7 +31,7 @@ func waitReady_MainLoop(
 	shouldAbort := func() error {
 		select {
 		case <-abortCh:
-			return errWaitReadyAbortChClosed
+			return lcerrors.ErrWaitReadyAbortChClosed
 		default:
 			return nil
 		}
@@ -62,7 +57,7 @@ func waitReady_MainLoop(
 			return err
 		}
 	}
-	return errWaitReadyExceededMaxAttempts
+	return lcerrors.ErrWaitReadyExceededMaxAttempts
 }
 
 func (c *Component) waitReady_Backoff(ctx context.Context, abortCh <-chan struct{}) error {
@@ -75,11 +70,11 @@ func (c *Component) waitReady_Backoff(ctx context.Context, abortCh <-chan struct
 	case <-time.After(d):
 		return nil
 	case <-abortCh:
-		return errWaitReadyAbortChClosed
+		return lcerrors.ErrWaitReadyAbortChClosed
 	case <-ctx.Done():
 		return context.Cause(ctx)
 	case <-c.doneCh:
-		return errWaitReadyComponentExited
+		return lcerrors.ErrWaitReadyComponentExited
 	}
 }
 
@@ -92,7 +87,7 @@ func (c *Component) waitReady_Backoff(ctx context.Context, abortCh <-chan struct
 func (c *Component) waitReady_CheckOnce(ctx context.Context) (bool, error) {
 	select {
 	case <-c.doneCh:
-		return false, errWaitReadyComponentExited
+		return false, lcerrors.ErrWaitReadyComponentExited
 	default:
 	}
 
@@ -116,6 +111,6 @@ func (c *Component) waitReady_CheckOnce(ctx context.Context) (bool, error) {
 		return ready, nil
 
 	case <-c.doneCh:
-		return false, errWaitReadyComponentExited
+		return false, lcerrors.ErrWaitReadyComponentExited
 	}
 }

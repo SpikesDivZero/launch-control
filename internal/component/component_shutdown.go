@@ -2,8 +2,9 @@ package component
 
 import (
 	"context"
-	"errors"
 	"time"
+
+	"github.com/spikesdivzero/launch-control/internal/lcerrors"
 )
 
 func (c *Component) Shutdown(ctx context.Context) error {
@@ -18,7 +19,7 @@ func (c *Component) Shutdown(ctx context.Context) error {
 	if c.isDead() {
 		return nil
 	} else {
-		return errors.New("component did not respond to ImplShutdown and run context cancel")
+		return lcerrors.ErrShutdownAbandonedNonResponsive
 	}
 }
 
@@ -79,6 +80,6 @@ func (c *Component) shutdownViaContext(context.Context) {
 	case <-c.doneCh:
 		// Responded successfully, and is now exited
 	case <-time.After(100 * time.Millisecond): // FIXME: time provided by controller?
-		c.logError("shutdown (ctx)", errors.New("did not respond to shutdown via ctx cancellation; abandoning it"))
+		// Did not respond, and is still alive
 	}
 }

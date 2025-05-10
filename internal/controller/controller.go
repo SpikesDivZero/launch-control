@@ -6,7 +6,7 @@ import (
 	"slices"
 	"sync"
 
-	launchErrors "github.com/spikesdivzero/launch-control/launch-errors"
+	"github.com/spikesdivzero/launch-control/internal/lcerrors"
 )
 
 type Component interface {
@@ -63,7 +63,7 @@ func (c *Controller) recordComponentError(name, stage string, err error) {
 	if err == nil {
 		return
 	}
-	err = launchErrors.ComponentError{Name: name, Stage: stage, Err: err}
+	err = lcerrors.ComponentError{Name: name, Stage: stage, Err: err}
 
 	c.stateMu.Lock()
 	defer c.stateMu.Unlock()

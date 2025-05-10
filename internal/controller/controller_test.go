@@ -11,8 +11,8 @@ import (
 
 	"github.com/shoenig/test"
 	"github.com/shoenig/test/must"
+	"github.com/spikesdivzero/launch-control/internal/lcerrors"
 	"github.com/spikesdivzero/launch-control/internal/testutil"
-	launchErrors "github.com/spikesdivzero/launch-control/launch-errors"
 )
 
 func newTestingController(t *testing.T, initialState lifecycleState) *Controller {
@@ -166,7 +166,7 @@ func TestController_recordComponentError(t *testing.T) {
 		firstErr := errors.New("fancy")
 		c.recordComponentError("foo", "bar", firstErr)
 		must.Len(t, 1, c.allErrors)
-		test.ErrorIs(t, c.allErrors[0], launchErrors.ComponentError{
+		test.ErrorIs(t, c.allErrors[0], lcerrors.ComponentError{
 			Name:  "foo",
 			Stage: "bar",
 			Err:   firstErr,
@@ -175,7 +175,7 @@ func TestController_recordComponentError(t *testing.T) {
 		secondErr := errors.New("fancy")
 		c.recordComponentError("jazz", "hands", secondErr)
 		must.Len(t, 2, c.allErrors)
-		test.ErrorIs(t, c.allErrors[1], launchErrors.ComponentError{
+		test.ErrorIs(t, c.allErrors[1], lcerrors.ComponentError{
 			Name:  "jazz",
 			Stage: "hands",
 			Err:   secondErr,
