@@ -13,11 +13,9 @@ import (
 	"github.com/shoenig/test"
 )
 
-type dummyError string
-
-func (s dummyError) Error() string { return string(s) }
-
 func TestAsyncCall(t *testing.T) {
+	testErrParentDead := errors.New("parent dead")
+
 	type control struct {
 		ctxCancel context.CancelCauseFunc
 	}
@@ -44,9 +42,9 @@ func TestAsyncCall(t *testing.T) {
 				func(ctx context.Context) int { panic("shouldn't be called") },
 			},
 			func(c control) {
-				c.ctxCancel(dummyError("parent dead"))
+				c.ctxCancel(testErrParentDead)
 			},
-			want{0, dummyError("parent dead"), 0},
+			want{0, testErrParentDead, 0},
 		},
 		{ // User function returns immediately
 			"user fast return",
@@ -145,9 +143,9 @@ func TestAsyncCall(t *testing.T) {
 			},
 			func(c control) {
 				time.Sleep(time.Second)
-				c.ctxCancel(dummyError("test parent cancel"))
+				c.ctxCancel(testErrParentDead)
 			},
-			want{0, dummyError("test parent cancel"), time.Second},
+			want{0, testErrParentDead, time.Second},
 		},
 	}
 	for _, tt := range tests {
