@@ -2,6 +2,7 @@ package component
 
 import (
 	"context"
+	"sync"
 	"time"
 )
 
@@ -12,14 +13,12 @@ type StartStopWrapper struct {
 	StartTimeout time.Duration
 	StopTimeout  time.Duration
 
+	stateMu       sync.Mutex
 	requestStopCh chan struct{}
 }
 
 func (ssw *StartStopWrapper) Run(ctx context.Context) error {
-	if ssw.requestStopCh != nil {
-		panic("internal: StartStopWrapper Run called twice")
-	}
-	ssw.requestStopCh = make(chan struct{})
+	ssw.initForRun()
 
 	if err := ssw.doCall(ctx, ssw.StartTimeout, ssw.ImplStart); err != nil {
 		return err
@@ -30,7 +29,20 @@ func (ssw *StartStopWrapper) Run(ctx context.Context) error {
 	return ssw.doCall(ctx, ssw.StopTimeout, ssw.ImplStop)
 }
 
+func (ssw *StartStopWrapper) initForRun() {
+	ssw.stateMu.Lock()
+	defer ssw.stateMu.Unlock()
+
+	if ssw.requestStopCh != nil {
+		panic("internal: StartStopWrapper Run called twice")
+	}
+	ssw.requestStopCh = make(chan struct{})
+}
+
 func (ssw *StartStopWrapper) Shutdown(ctx context.Context) error {
+	ssw.stateMu.Lock()
+	defer ssw.stateMu.Unlock()
+
 	if ssw.requestStopCh == nil {
 		ssw.requestStopCh = make(chan struct{})
 	}
