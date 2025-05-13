@@ -5,6 +5,7 @@ package controller
 import (
 	"testing"
 	"testing/synctest"
+	"time"
 
 	"github.com/shoenig/test"
 	"github.com/spikesdivzero/launch-control/internal/testutil"
@@ -31,7 +32,9 @@ func TestController_controlLoop(t *testing.T) {
 		// The internal state changes are assessed via panic calls in the Alive and Dying funcs
 
 		c.RequestStop(nil)
+		time.Sleep(dyingMonitorExitReportingGracePeriod)
 		synctest.Wait()
+
 		testutil.ChanReadIsClosed(t, innerDone)
 
 		test.Eq(t, lifecycleDead, c.lifecycleState)

@@ -200,6 +200,7 @@ func TestController_sendLaunchRequest(t *testing.T) {
 
 			// Control loop should exit.
 			c.RequestStop(nil)
+			time.Sleep(dyingMonitorExitReportingGracePeriod)
 			synctest.Wait()
 			testutil.ChanReadIsClosed(t, c.doneCh)
 		})
