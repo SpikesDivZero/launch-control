@@ -1,17 +1,26 @@
+export GOEXPERIMENT = synctest
+
+ifdef RACE_TEST
+export GOMAXPROCS  = 1
+export GOTRACEBACK = all
+TEST_FLAG = -race
+endif
+
 .PHONY: help
 help:
 	@echo "make test: Runs tests and updates coverage.html"
-	@echo "make test-race: Runs go tests in race detection mode (no coverage report)"
+	@echo "make test-race: Same as 'make test', but runs it in race detection mode"
 	@echo "make generate: Runs code generation"
 
 .PHONY: test
 test:
-	GOEXPERIMENT=synctest go test -coverprofile coverage.out -v ./...
+	go test ${TEST_FLAG} -coverprofile coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
-	GOEXPERIMENT=synctest golangci-lint run ./...
+	golangci-lint run ./...
 
+.PHONY: test-race
 test-race:
-	GOMAXPROCS=1 GOTRACEBACK=all GOEXPERIMENT=synctest go test -race -count 10 ./...
+	@$(MAKE) RACE_TEST=1 test
 
 .PHONY: generate
 generate:
