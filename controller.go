@@ -22,8 +22,12 @@ type Controller struct {
 	impl *controller.Controller
 }
 
-func NewController(ctx context.Context) Controller {
-	return Controller{impl: controller.New(ctx)}
+func NewController(ctx context.Context, opts ...ControllerOption) Controller {
+	c := Controller{impl: controller.New(ctx)}
+	for _, opt := range opts {
+		opt(c.impl)
+	}
+	return c
 }
 
 // Launch builds a component from the provided name and options, then launches it inside of the controller.

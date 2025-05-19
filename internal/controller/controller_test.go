@@ -33,7 +33,7 @@ func TestNew(t *testing.T) {
 	c := New(t.Context())
 
 	// We saved the args
-	test.Eq(t, log, c.log)
+	test.Eq(t, log, c.Log)
 	test.Eq(t, t.Context(), c.ctx)
 
 	// We want to always have a buffer on requestLaunchCh -- both for our tests to use, and

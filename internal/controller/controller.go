@@ -21,7 +21,8 @@ type Component interface {
 
 type Controller struct {
 	ctx context.Context
-	log *slog.Logger
+
+	Log *slog.Logger
 
 	// Control Loop related bits.
 	stateMu         sync.Mutex
@@ -37,7 +38,8 @@ func New(ctx context.Context) *Controller {
 	log := slog.New(slog.DiscardHandler)
 	return &Controller{
 		ctx: ctx,
-		log: log,
+
+		Log: log,
 
 		lifecycleState:  lifecycleNew,
 		doneCh:          make(chan struct{}),
