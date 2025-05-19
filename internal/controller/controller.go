@@ -33,7 +33,8 @@ type Controller struct {
 	components      []Component
 }
 
-func New(ctx context.Context, log *slog.Logger) *Controller {
+func New(ctx context.Context) *Controller {
+	log := slog.New(slog.DiscardHandler)
 	return &Controller{
 		ctx: ctx,
 		log: log,

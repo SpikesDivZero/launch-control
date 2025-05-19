@@ -9,7 +9,6 @@ package launch
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/spikesdivzero/launch-control/internal/controller"
 )
@@ -23,8 +22,8 @@ type Controller struct {
 	impl *controller.Controller
 }
 
-func NewController(ctx context.Context, log *slog.Logger) Controller {
-	return Controller{impl: controller.New(ctx, log)}
+func NewController(ctx context.Context) Controller {
+	return Controller{impl: controller.New(ctx)}
 }
 
 // Launch builds a component from the provided name and options, then launches it inside of the controller.

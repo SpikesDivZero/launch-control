@@ -16,8 +16,7 @@ import (
 )
 
 func newTestingController(t *testing.T, initialState lifecycleState) *Controller {
-	log := slog.New(slog.DiscardHandler)
-	c := New(t.Context(), log)
+	c := New(t.Context())
 	c.lifecycleState = initialState
 	return c
 }
@@ -31,7 +30,7 @@ func Test_newTestingController(t *testing.T) {
 
 func TestNew(t *testing.T) {
 	log := slog.New(slog.DiscardHandler)
-	c := New(t.Context(), log)
+	c := New(t.Context())
 
 	// We saved the args
 	test.Eq(t, log, c.log)

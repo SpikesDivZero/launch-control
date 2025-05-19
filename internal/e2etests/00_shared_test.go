@@ -1,7 +1,6 @@
 package e2etests
 
 import (
-	"log/slog"
 	"testing"
 
 	"github.com/spikesdivzero/launch-control"
@@ -11,5 +10,5 @@ import (
 // Also, if any timings concerns do come into play, we won't end up having tests run for hours.
 
 func newController(t *testing.T) launch.Controller {
-	return launch.NewController(t.Context(), slog.New(slog.DiscardHandler))
+	return launch.NewController(t.Context())
 }
