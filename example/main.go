@@ -38,7 +38,7 @@ func main() {
 	// Caveat: run styles and check-ready should not be here, as they can only be provided once per component.
 	defaultOpts := launch.WithBundledOptions()
 
-	ctrl := launch.NewController(ctx, log)
+	ctrl := launch.NewController(ctx, launch.WithControllerLogger(log))
 
 	sigint := IntteruptListener{
 		Log: log.With("prefix", "IntteruptListener"),

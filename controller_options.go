@@ -6,16 +6,14 @@ import (
 	"github.com/spikesdivzero/launch-control/internal/controller"
 )
 
-type internalController = controller.Controller
-
-type ControllerOption func(*internalController)
+type ControllerOption func(*controller.Controller)
 
 func WithControllerLogger(log *slog.Logger) ControllerOption {
 	if log == nil {
 		panic(optionNilArgError{"WithControllerLogger", "log"})
 	}
 
-	return func(ic *internalController) {
+	return func(ic *controller.Controller) {
 		ic.Log = log
 	}
 }
