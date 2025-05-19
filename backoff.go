@@ -8,12 +8,20 @@ import (
 
 type BackoffFunc func() time.Duration
 
+// Returns a function that generates a constant backoff.
 func ConstBackoff(delay time.Duration) BackoffFunc {
 	return func() time.Duration {
 		return delay
 	}
 }
 
+// Returns a function that generates an exponential backoff.
+//
+// The approximate formula is `minDelay * pow(exp, N-1)`, where `N` is the call number.
+//
+// If enabled, Jitter is a random +/- 10% of the computed delay.
+//
+// As a final step, the calculated backoff is clamped to within [minDelay, maxDelay].
 func ExpBackoff(minDelay, maxDelay time.Duration, exp float64, jitter bool) BackoffFunc {
 	minDelayF := float64(minDelay)
 	maxDelayF := float64(maxDelay)

@@ -118,6 +118,12 @@ const NoTimeout time.Duration = 50 * (time.Hour * 24 * 365)
 
 type ComponentOption func(*componentBuildState)
 
+// Combines a set of options into a single ComponentOption.
+//
+// Great for use in defining your application's default options:
+//
+//	myDefaultOptions := WithBundledOptions( /* ...all your defaults */ )
+//	ctrl.Launch("name", myDefaultOptions, /* ...other options */ )
 func WithBundledOptions(opts ...ComponentOption) ComponentOption {
 	return func(cbs *componentBuildState) {
 		for _, opt := range opts {
@@ -126,6 +132,21 @@ func WithBundledOptions(opts ...ComponentOption) ComponentOption {
 	}
 }
 
+// Defines the main `Run` and `Shutdown` functions that control the component's lifecycle.
+//
+// `Run` is a blocking function, that returns when the component's has exited (or has started exiting via `Shutdown`).
+//
+// If `Run` returns an error, then the error will be passed up to the controller and the controller will transition
+// into a failed/shutting down state.
+//
+// `Shutdown` is called when it's time to terminate the component. The shutdown process is not considered complete
+// until both `Run` and `Shutdown` have finished, or their corresponding timeouts have completed.
+//
+// If you've also provided [WithCheckReady], it's worth noting that `Shutdown` may be called at any point. The
+// `CheckReady` function may or may not have been called. If the `CheckReady` call timed out, then it may still be
+// running in another coroutine.
+//
+// Constraints: [WithRun] may only be provided once, and is mutually exclusive with [WithStartStop].
 func WithRun(
 	run func(context.Context) error,
 	shutdown func(context.Context) error,
@@ -145,6 +166,12 @@ func WithRun(
 	}
 }
 
+// Applies a call-duration timeout to the `Shutdown` function provided to [WithRun].
+//
+// In the event that both this and [WithShutdownCompletionTimeout] are provided, the call timeout
+// will be the lesser of the two durations.
+//
+// If not provided, it defaults to [NoTimeout].
 func WithShutdownCallTimeout(d time.Duration) ComponentOption {
 	if d <= 0 {
 		d = NoTimeout
@@ -155,6 +182,10 @@ func WithShutdownCallTimeout(d time.Duration) ComponentOption {
 	}
 }
 
+// Applies a timeout to the overall shutdown process. It is expected that within this time, both `Run` and `Shutdown`
+// should return successfully.
+//
+// If not provided, it defaults to [NoTimeout].
 func WithShutdownCompletionTimeout(d time.Duration) ComponentOption {
 	if d <= 0 {
 		d = NoTimeout
@@ -165,6 +196,14 @@ func WithShutdownCompletionTimeout(d time.Duration) ComponentOption {
 	}
 }
 
+// Wraps the provided `Start` and `Stop` functions, making them compatible with the controllers Run-Shutdown model.
+//
+// Both `Start` and `Stop` are expected to return once their respective step is completed.
+//
+// If `Start` returns an error, then the error will be passed up to the controller and the controller will transition
+// into a failed/shutting down state.
+//
+// Constraints: [WithStartStop] may only be provided once, and is mutually exclusive with [WithRun].
 func WithStartStop(
 	start func(context.Context) error,
 	stop func(context.Context) error,
@@ -184,9 +223,11 @@ func WithStartStop(
 	}
 }
 
-// FIXME: not a big fan of this name, or having both timeouts in one call.
-// I didn't like the idea of "WithStartStopStartTimeout".
-// And for world history reasons, I didn't like the idea of abbreviating StartStop to a double-S.
+// Applies a call-duration timeout to the `Start` and `Stop` functions provided to [WithStartStop].
+//
+// These values default to [NoTimeout].
+//
+// Both zero and negative duration arguments are replaced with [NoTimeout].
 func WithStartStopCallTimeouts(startD, stopD time.Duration) ComponentOption {
 	if startD <= 0 {
 		startD = NoTimeout
@@ -201,6 +242,16 @@ func WithStartStopCallTimeouts(startD, stopD time.Duration) ComponentOption {
 	}
 }
 
+// Defines a function that can check to see if the component is fully started.
+//
+// The returns from `CheckReady` are evaluated in the following order:
+//
+//   - If an error is returned, then the error is passed up to the controller, and the startup is aborted.
+//   - If true is returned, then the component is both started and ready, and we can continue.
+//   - Otherwise (false and no error), we retry as permitted by [WithCheckReadyMaxAttempts] and an delay from
+//     [WithCheckReadyBackoff].
+//
+// Constraint: This option may only be provided once.
 func WithCheckReady(
 	checkReady func(context.Context) (bool, error),
 ) ComponentOption {
@@ -215,6 +266,9 @@ func WithCheckReady(
 	}
 }
 
+// Applies a call-duration timeout to the `CheckReady` function provided to [WithCheckReady].
+//
+// If not provided, it defaults to [NoTimeout].
 func WithCheckReadyCallTimeout(d time.Duration) ComponentOption {
 	if d <= 0 {
 		d = NoTimeout
@@ -225,6 +279,9 @@ func WithCheckReadyCallTimeout(d time.Duration) ComponentOption {
 	}
 }
 
+// Defines a function that returns how long to back off after each `CheckReady` attempt.
+//
+// If not provided, it defaults to a function that always returns 0 delay.
 func WithCheckReadyBackoff(
 	backoff BackoffFunc,
 ) ComponentOption {
@@ -237,6 +294,9 @@ func WithCheckReadyBackoff(
 	}
 }
 
+// Defines the max number of times to attempt a `CheckReady`.
+//
+// If not provided, it defaults to [math.MaxInt]
 func WithCheckReadyMaxAttempts(n int) ComponentOption {
 	if n <= 0 {
 		n = math.MaxInt
