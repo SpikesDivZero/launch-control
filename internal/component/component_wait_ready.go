@@ -78,12 +78,14 @@ func (c *Component) waitReady_Backoff(ctx context.Context, abortCh <-chan struct
 	}
 }
 
-// Nuance:
-//
 // Any errors returned by THIS method are a signal to waitReady_Loop to stop abort the main loop and
 // instead return the error we provided.
 //
-// If the User-provided ImplCheckReady returns an error, that's something we need to log and then retry.
+// Returned errors from ImplCheckReady (or AsyncCall) are a policy matter as to whether or not we return them
+// from CheckOnce. For now, the policy will be that any errors returned from AsyncCall (timeout) or ImplCheckReady
+// are fatal to the application lifecycle.
+//
+// TODO: consider add a component option that lets us define the policy on a controller-wide and/or per-component basis
 func (c *Component) waitReady_CheckOnce(ctx context.Context) (bool, error) {
 	select {
 	case <-c.doneCh:
@@ -92,24 +94,18 @@ func (c *Component) waitReady_CheckOnce(ctx context.Context) (bool, error) {
 	}
 
 	resultCh := AsyncCall(ctx, "CheckReady.CallTimeout", c.CheckReadyOptions.CallTimeout, 100*time.Millisecond,
-		func(ctx context.Context) bool {
-			ready, err := c.ImplCheckReady(ctx)
-			if ready {
-				return true
-			}
-			if err != nil {
-				c.logError("wait-ready", err)
-			}
-			return false
+		func(ctx context.Context) Pair[bool, error] {
+			r, err := c.ImplCheckReady(ctx)
+			return Pair[bool, error]{r, err}
 		})
 
 	select {
 	case result := <-resultCh:
-		ready, callErr := result.Values()
+		rp, callErr := result.Values()
 		if callErr != nil {
 			return false, callErr
 		}
-		return ready, nil
+		return rp.Values()
 
 	case <-c.doneCh:
 		return false, lcerrors.ErrWaitReadyComponentExited

@@ -286,6 +286,8 @@ func TestComponent_waitReady_Backoff(t *testing.T) {
 }
 
 func TestComponent_waitReady_CheckOnce(t *testing.T) {
+	errUserReturned := errors.New("test user error")
+
 	type testControl struct {
 		c         *Component
 		closeDone func()
@@ -332,11 +334,11 @@ func TestComponent_waitReady_CheckOnce(t *testing.T) {
 			wantResult{false, nil, 0},
 		},
 		{
-			// We log user errors, but don't return them to the main loop.
+			// TODO: implement policy to decide error handling for user-returned errors
 			"good call, result=false, generic user-error",
 			nil,
-			checkReturn{false, errors.New("test user error"), 0},
-			wantResult{false, nil, 0},
+			checkReturn{false, errUserReturned, 0},
+			wantResult{false, errUserReturned, 0},
 		},
 		{
 			"call timeout",
