@@ -1,11 +1,5 @@
 export GOEXPERIMENT = synctest
 
-ifdef RACE_TEST
-export GOMAXPROCS  = 1
-export GOTRACEBACK = all
-TEST_FLAG = -race
-endif
-
 .PHONY: help
 help:
 	@echo "make test: Runs tests and updates coverage.html"
@@ -19,8 +13,10 @@ test:
 	golangci-lint run ./...
 
 .PHONY: test-race
-test-race:
-	@$(MAKE) RACE_TEST=1 test
+test-race: export GOMAXPROCS=1
+test-race: export GOTRACEBACK=all
+test-race: TEST_FLAG=-race -count 10
+test-race: test
 
 .PHONY: generate
 generate:
