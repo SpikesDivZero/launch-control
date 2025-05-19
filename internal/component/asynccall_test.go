@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/shoenig/test"
+	"github.com/spikesdivzero/launch-control/internal/lcerrors"
 )
 
 func TestAsyncCall(t *testing.T) {
@@ -19,10 +20,10 @@ func TestAsyncCall(t *testing.T) {
 	type control struct {
 		ctxCancel context.CancelCauseFunc
 	}
-	type args struct {
-		timeout      time.Duration
-		timeoutGrace time.Duration
-		f            func(context.Context) int
+	type timeoutArgs struct {
+		d      time.Duration
+		grace  time.Duration
+		source string
 	}
 	type want struct {
 		val int
@@ -31,16 +32,15 @@ func TestAsyncCall(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		args    args
+		timeout timeoutArgs
+		f       func(context.Context) int
 		control func(control)
 		want    want
 	}{
 		{ // When the parent context is already dead, we shouldn't invoke the user func
 			"parent ctx already dead",
-			args{
-				time.Second, time.Second,
-				func(ctx context.Context) int { panic("shouldn't be called") },
-			},
+			timeoutArgs{d: time.Second, grace: time.Second},
+			func(ctx context.Context) int { panic("shouldn't be called") },
 			func(c control) {
 				c.ctxCancel(testErrParentDead)
 			},
@@ -48,104 +48,99 @@ func TestAsyncCall(t *testing.T) {
 		},
 		{ // User function returns immediately
 			"user fast return",
-			args{
-				time.Second, time.Second,
-				func(ctx context.Context) int { return 84 },
-			},
+			timeoutArgs{d: time.Second, grace: time.Second},
+			func(ctx context.Context) int { return 84 },
 			nil,
 			want{84, nil, 0},
 		},
 		{ // User function returns after a short timeout
 			// Similar to above, but checks our in-test timing closer before we start digging any deeper.
 			"user slow but good return",
-			args{
-				5 * time.Second, time.Second,
-				func(ctx context.Context) int {
-					time.Sleep(2 * time.Second)
-					return 63
-				},
+			timeoutArgs{d: 5 * time.Second, grace: time.Second},
+			func(ctx context.Context) int {
+				time.Sleep(2 * time.Second)
+				return 63
 			},
 			nil,
 			want{63, nil, 2 * time.Second},
 		},
 		{ // User function exits without writing a value (only possible via runtime.Goexit?)
 			"user causes goexit",
-			args{
-				3 * time.Second, time.Second,
-				func(ctx context.Context) int {
-					time.Sleep(time.Second)
-					runtime.Goexit()
-					panic("unreachable")
-				},
+			timeoutArgs{d: 3 * time.Second, grace: time.Second},
+			func(ctx context.Context) int {
+				time.Sleep(time.Second)
+				runtime.Goexit()
+				panic("unreachable")
 			},
 			nil,
 			want{0, errPrematureChannelClose, time.Second},
 		},
 		{
 			"timeout, no grace",
-			args{
-				time.Second, 0,
-				func(ctx context.Context) int {
-					<-ctx.Done()
-					return 67
-				},
+			timeoutArgs{d: time.Second},
+			func(ctx context.Context) int {
+				<-ctx.Done()
+				return 67
 			},
 			nil,
 			want{0, context.DeadlineExceeded, time.Second},
 		},
 		{
 			"timeout, no luck in grace",
-			args{
-				4 * time.Second, time.Second,
-				func(ctx context.Context) int {
-					time.Sleep(6 * time.Second)
-					return 64
-				},
+			timeoutArgs{d: 4 * time.Second, grace: time.Second},
+			func(ctx context.Context) int {
+				time.Sleep(6 * time.Second)
+				return 64
 			},
 			nil,
 			want{0, context.DeadlineExceeded, 5 * time.Second},
 		},
 		{
 			"timeout, result in grace",
-			args{
-				8 * time.Second, 2 * time.Second,
-				func(ctx context.Context) int {
-					<-ctx.Done()
-					time.Sleep(time.Second)
-					return 96
-				},
+			timeoutArgs{d: 8 * time.Second, grace: 2 * time.Second},
+			func(ctx context.Context) int {
+				<-ctx.Done()
+				time.Sleep(time.Second)
+				return 96
 			},
 			nil,
 			want{96, nil, 9 * time.Second},
 		},
 		{
 			"timeout, user goexit in grace",
-			args{
-				3 * time.Second, 2 * time.Second,
-				func(ctx context.Context) int {
-					time.Sleep(4 * time.Second)
-					runtime.Goexit()
-					panic("unreachable")
-				},
+			timeoutArgs{d: 3 * time.Second, grace: 2 * time.Second},
+			func(ctx context.Context) int {
+				time.Sleep(4 * time.Second)
+				runtime.Goexit()
+				panic("unreachable")
 			},
 			nil,
 			want{0, errPrematureChannelClose, 4 * time.Second},
 		},
 		{
 			"parent cancel cause honored",
-			args{
-				time.Minute, 0,
-				func(ctx context.Context) int {
-					<-ctx.Done()
-					time.Sleep(time.Second)
-					return 12
-				},
+			timeoutArgs{d: time.Minute},
+			func(ctx context.Context) int {
+				<-ctx.Done()
+				time.Sleep(time.Second)
+				return 12
 			},
 			func(c control) {
 				time.Sleep(time.Second)
 				c.ctxCancel(testErrParentDead)
 			},
 			want{0, testErrParentDead, time.Second},
+		},
+		{
+			"uses custom timeout error type",
+			timeoutArgs{d: time.Second, source: "custom-test-source"},
+			func(ctx context.Context) int {
+				<-ctx.Done()
+				time.Sleep(time.Second)
+				return 12
+			},
+			nil,
+			want{0, lcerrors.ContextTimeoutError{Source: "custom-test-source"}, time.Second},
 		},
 	}
 	for _, tt := range tests {
@@ -161,14 +156,18 @@ func TestAsyncCall(t *testing.T) {
 					synctest.Wait()
 				}
 
+				if tt.timeout.source == "" {
+					tt.timeout.source = "in-test"
+				}
+
 				t0 := time.Now()
-				ch := AsyncCall(ctx, tt.args.timeout, tt.args.timeoutGrace, tt.args.f)
+				ch := AsyncCall(ctx, tt.timeout.source, tt.timeout.d, tt.timeout.grace, tt.f)
 				got, err := (<-ch).Values()
 				gotD := time.Since(t0)
 
 				test.Eq(t, tt.want.d, gotD)
 				test.Eq(t, tt.want.val, got)
-				test.ErrorIs(t, tt.want.err, err)
+				test.ErrorIs(t, err, tt.want.err)
 			})
 		})
 	}

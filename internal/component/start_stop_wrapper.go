@@ -20,13 +20,13 @@ type StartStopWrapper struct {
 func (ssw *StartStopWrapper) Run(ctx context.Context) error {
 	ssw.initForRun()
 
-	if err := ssw.doCall(ctx, ssw.StartTimeout, ssw.ImplStart); err != nil {
+	if err := ssw.doCall(ctx, "StartStopWrapper.StartTimeout", ssw.StartTimeout, ssw.ImplStart); err != nil {
 		return err
 	}
 
 	<-ssw.requestStopCh
 
-	return ssw.doCall(ctx, ssw.StopTimeout, ssw.ImplStop)
+	return ssw.doCall(ctx, "StartStopWrapper.StopTimeout", ssw.StopTimeout, ssw.ImplStop)
 }
 
 func (ssw *StartStopWrapper) initForRun() {
@@ -52,10 +52,11 @@ func (ssw *StartStopWrapper) Shutdown(ctx context.Context) error {
 
 func (ssw *StartStopWrapper) doCall(
 	ctx context.Context,
+	timeoutSource string,
 	timeout time.Duration,
 	impl func(context.Context) error,
 ) error {
-	err, callErr := (<-AsyncCall(ctx, timeout, 100*time.Millisecond, impl)).Values()
+	err, callErr := (<-AsyncCall(ctx, timeoutSource, timeout, 100*time.Millisecond, impl)).Values()
 	if callErr != nil {
 		return callErr
 	}

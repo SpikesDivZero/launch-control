@@ -3,6 +3,8 @@ package component
 import (
 	"context"
 	"time"
+
+	"github.com/spikesdivzero/launch-control/internal/lcerrors"
 )
 
 type Pair[T1, T2 any] struct {
@@ -22,6 +24,7 @@ func (p Pair[T1, T2]) Values() (T1, T2) {
 // hit, as we do not differentiate a [context.DeadlineExceeded] as being from this timeout or a parent timeout.
 func AsyncCall[RT any](
 	ctx context.Context,
+	timeoutSource string,
 	timeout time.Duration,
 	timeoutGrace time.Duration,
 	f func(context.Context) RT,
@@ -39,7 +42,7 @@ func AsyncCall[RT any](
 		return returnCh
 	}
 
-	ctx, ctxCancel := context.WithTimeout(ctx, timeout)
+	ctx, ctxCancel := context.WithTimeoutCause(ctx, timeout, lcerrors.ContextTimeoutError{Source: timeoutSource})
 	// We don't cancel our ctx here, but instead inside our monitoring goroutine
 
 	// Our inner call and result channel

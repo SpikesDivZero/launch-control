@@ -99,7 +99,7 @@ func TestStartStopWrapper_doCall(t *testing.T) {
 	ssw := newStartStopWrapper(t)
 
 	// Capture the callErr
-	err := ssw.doCall(t.Context(), time.Second, func(ctx context.Context) error {
+	err := ssw.doCall(t.Context(), "in-test", time.Second, func(ctx context.Context) error {
 		runtime.Goexit() // called within the AsyncCall coroutine
 		panic("unreachable")
 	})
@@ -107,7 +107,7 @@ func TestStartStopWrapper_doCall(t *testing.T) {
 
 	// And the basic error
 	testErr := errors.New("goose")
-	err = ssw.doCall(t.Context(), time.Second, func(ctx context.Context) error {
+	err = ssw.doCall(t.Context(), "in-test", time.Second, func(ctx context.Context) error {
 		return testErr
 	})
 	test.ErrorIs(t, err, testErr)

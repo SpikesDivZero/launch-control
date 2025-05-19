@@ -91,16 +91,17 @@ func (c *Component) waitReady_CheckOnce(ctx context.Context) (bool, error) {
 	default:
 	}
 
-	resultCh := AsyncCall(ctx, c.CheckReadyOptions.CallTimeout, 100*time.Millisecond, func(ctx context.Context) bool {
-		ready, err := c.ImplCheckReady(ctx)
-		if ready {
-			return true
-		}
-		if err != nil {
-			c.logError("wait-ready", err)
-		}
-		return false
-	})
+	resultCh := AsyncCall(ctx, "CheckReady.CallTimeout", c.CheckReadyOptions.CallTimeout, 100*time.Millisecond,
+		func(ctx context.Context) bool {
+			ready, err := c.ImplCheckReady(ctx)
+			if ready {
+				return true
+			}
+			if err != nil {
+				c.logError("wait-ready", err)
+			}
+			return false
+		})
 
 	select {
 	case result := <-resultCh:
