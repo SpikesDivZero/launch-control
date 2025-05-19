@@ -3,6 +3,8 @@ package component
 import (
 	"context"
 	"time"
+
+	"github.com/spikesdivzero/launch-control/internal/lcerrors"
 )
 
 func (c *Component) Start(ctx context.Context) error {
@@ -43,7 +45,7 @@ func (c *Component) monitorExit(ctx context.Context, runErrCh <-chan error) {
 
 	select {
 	case <-time.After(100 * time.Millisecond): // FIXME: dynamic value, provided by controller?
-		c.log.Debug("Component.monitorExit is exiting while the component is still alive.")
+		c.logError("monitor-exit", lcerrors.ErrMonitorExitedWhileStillAlive)
 
 	case err, ok := <-runErrCh:
 		c.notifyOnExited(checkForPrematureClose(err, ok))

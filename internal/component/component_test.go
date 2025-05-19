@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"math"
 	"math/rand/v2"
 	"testing"
@@ -44,7 +43,6 @@ func newTestingComponent(*testing.T) *Component {
 			MaxAttempts: math.MaxInt,
 		},
 
-		log: slog.New(slog.DiscardHandler),
 		logError: func(stage string, err error) {
 			panic("TestingComponent.logError not defined but used in test")
 		},
@@ -56,8 +54,6 @@ func newTestingComponent(*testing.T) *Component {
 
 func TestComponent_ConnectController(t *testing.T) {
 	c := Component{}
-
-	testLog := slog.New(slog.DiscardHandler)
 
 	testErr := errors.New("fancy")
 
@@ -74,9 +70,7 @@ func TestComponent_ConnectController(t *testing.T) {
 		test.ErrorIs(t, err, testErr)
 	}
 
-	c.ConnectController(testLog, testLogError, testNotify)
-
-	test.EqOp(t, testLog, c.log)
+	c.ConnectController(testLogError, testNotify)
 
 	must.NotNil(t, c.notifyOnExited)
 	c.logError("in-test", testErr)

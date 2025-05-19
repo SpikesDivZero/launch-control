@@ -11,6 +11,7 @@ import (
 
 	"github.com/shoenig/test"
 	"github.com/shoenig/test/must"
+	"github.com/spikesdivzero/launch-control/internal/lcerrors"
 	"github.com/spikesdivzero/launch-control/internal/testutil"
 )
 
@@ -85,7 +86,6 @@ func TestComponent_Start(t *testing.T) {
 
 func TestComponent_monitorExit(t *testing.T) {
 	testErr := errors.New("test error 1")
-	errMonitorExited := errors.New("monitor exited")
 
 	type control struct {
 		c         *Component
@@ -135,7 +135,7 @@ func TestComponent_monitorExit(t *testing.T) {
 				// We never write to the channel, so it'll timeout 100ms from this point
 				// FIXME: 100ms assumption is based on hard-coded value in main code, which is also a FIXME
 			},
-			errMonitorExited,
+			lcerrors.ErrMonitorExitedWhileStillAlive,
 			850 * time.Millisecond,
 		},
 
@@ -179,9 +179,16 @@ func TestComponent_monitorExit(t *testing.T) {
 				c := newTestingComponent(t)
 
 				// We use a channel to test the result here so we can check timings.
-				resultCh := make(chan error, 2)
+				resultCh := make(chan error, 3)
 				c.notifyOnExited = func(err error) {
 					resultCh <- err
+				}
+
+				calledLogError := false
+				c.logError = func(stage string, err error) {
+					calledLogError = true
+					test.Eq(t, "monitor-exit", stage)
+					resultCh <- err // To be tested below
 				}
 
 				ctx, cancel := context.WithCancel(t.Context())
@@ -199,13 +206,16 @@ func TestComponent_monitorExit(t *testing.T) {
 
 				go func() {
 					c.monitorExit(ctx, runErrCh)
-					resultCh <- errMonitorExited
+					resultCh <- errors.New("test fail: neither logError nor notifyOnExited called?")
 				}()
 
 				t0 := time.Now()
 				err := <-resultCh
 				test.Eq(t, tt.wantD, time.Since(t0))
 				test.ErrorIs(t, err, tt.wantErr)
+
+				wantCalledLogError := tt.wantErr == lcerrors.ErrMonitorExitedWhileStillAlive
+				test.Eq(t, wantCalledLogError, calledLogError)
 			})
 		})
 	}

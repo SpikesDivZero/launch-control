@@ -2,7 +2,6 @@ package component
 
 import (
 	"context"
-	"log/slog"
 	"time"
 )
 
@@ -29,7 +28,6 @@ type Component struct {
 	CheckReadyOptions CheckReadyOptions
 
 	// Values provided by by [ConnectController]
-	log            *slog.Logger
 	logError       func(stage string, err error)
 	notifyOnExited func(error)
 
@@ -39,11 +37,9 @@ type Component struct {
 }
 
 func (c *Component) ConnectController(
-	log *slog.Logger,
 	logError func(stage string, err error),
 	notifyOnExited func(error),
 ) {
-	c.log = log
 	c.logError = logError
 	c.notifyOnExited = notifyOnExited
 }

@@ -4,7 +4,6 @@ package testutil
 
 import (
 	"errors"
-	"log/slog"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -25,10 +24,8 @@ func TestMockComponent_ConnectController(t *testing.T) {
 		testLogErrorGot.err = err
 	}
 
-	log := slog.New(slog.DiscardHandler)
-
 	mc := &MockComponent{}
-	mc.ConnectController(log, testLogError, testNotify)
+	mc.ConnectController(testLogError, testNotify)
 
 	testErr := errors.New("boop")
 	mc.Recorder.Connect.NotifyOnExited(testErr)
@@ -37,8 +34,6 @@ func TestMockComponent_ConnectController(t *testing.T) {
 	mc.Recorder.Connect.LogError("in-test", testErr)
 	test.Eq(t, testLogErrorGot.stage, "in-test")
 	test.ErrorIs(t, testLogErrorGot.err, testErr)
-
-	test.Eq(t, log, mc.Recorder.Connect.Log)
 }
 
 func TestMockComponent_Start(t *testing.T) {

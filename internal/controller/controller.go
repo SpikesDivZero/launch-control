@@ -11,7 +11,6 @@ import (
 
 type Component interface {
 	ConnectController(
-		log *slog.Logger,
 		logError func(string, error),
 		notifyOnExited func(error),
 	)
@@ -47,7 +46,7 @@ func New(ctx context.Context, log *slog.Logger) *Controller {
 }
 
 func (c *Controller) Launch(name string, comp Component) {
-	comp.ConnectController(c.log,
+	comp.ConnectController(
 		func(stage string, err error) {
 			c.recordComponentError(name, stage, err)
 		},

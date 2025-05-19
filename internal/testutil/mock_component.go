@@ -2,7 +2,6 @@ package testutil
 
 import (
 	"context"
-	"log/slog"
 	"time"
 )
 
@@ -32,7 +31,6 @@ type MockComponent struct {
 	Recorder struct {
 		Connect struct {
 			Called         bool
-			Log            *slog.Logger
 			LogError       func(string, error)
 			NotifyOnExited func(error)
 		}
@@ -53,13 +51,11 @@ type MockComponent struct {
 }
 
 func (mc *MockComponent) ConnectController(
-	log *slog.Logger,
 	logError func(string, error),
 	notifyOnExited func(error),
 ) {
 	rc := &mc.Recorder.Connect
 	rc.Called = true
-	rc.Log = log
 	rc.LogError = logError
 	rc.NotifyOnExited = notifyOnExited
 }

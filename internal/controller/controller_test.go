@@ -72,7 +72,6 @@ func TestController_Launch(t *testing.T) {
 
 		// Check to see that it was connected
 		test.True(t, mc.Recorder.Connect.Called)
-		test.Eq(t, c.log, mc.Recorder.Connect.Log)
 		test.NotNil(t, mc.Recorder.Connect.NotifyOnExited) // Impl validated in TestController_Launch_notifyOnExit
 
 		select {
