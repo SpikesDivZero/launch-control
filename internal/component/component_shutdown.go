@@ -38,7 +38,8 @@ func (c *Component) shutdownViaImpl(ctx context.Context) {
 		return
 	}
 
-	ctx, ctxCancel := context.WithTimeout(ctx, c.ShutdownOptions.CompletionTimeout)
+	ctx, ctxCancel := context.WithTimeoutCause(ctx, c.ShutdownOptions.CompletionTimeout,
+		lcerrors.ContextTimeoutError{Source: "Shutdown.CompletionTimeout"})
 	defer ctxCancel()
 
 	// We need to wait for BOTH ImplShutdown to complete, as well as ImplRun to return.

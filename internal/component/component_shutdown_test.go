@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/shoenig/test"
+	"github.com/spikesdivzero/launch-control/internal/lcerrors"
 	"github.com/spikesdivzero/launch-control/internal/testutil"
 )
 
@@ -42,8 +43,7 @@ func TestComponent_Shutdown(t *testing.T) {
 					}
 				}
 
-				// TODO: should we check this?
-				c.logError = func(string, error) {}
+				c.logError = func(string, error) {} // We validate our calls to this elsewhere
 
 				err := c.Shutdown(ctx)
 				test.Eq(t, []string{"ImplShutdown", "runCtxCancel"}, calls)
@@ -80,23 +80,28 @@ func TestComponent_shutdownViaImpl(t *testing.T) {
 		err        error
 	}
 
+	testErr := errors.New("user error")
+
 	tests := []struct {
 		name     string
 		control  func(control)
 		shutdown shutdownMock
 		wantD    time.Duration
+		wantLog  error
 	}{
 		{
 			"already dead",
 			func(c control) { c.closeDone() },
 			shutdownMock{d: 5 * time.Second},
 			0,
+			nil,
 		},
 		{
 			"run exits before ImplShutdown returns",
 			nil,
 			shutdownMock{d: 850 * time.Millisecond, closesDone: true},
 			850 * time.Millisecond,
+			nil,
 		},
 		{
 			"ImplShutdown returns before run exits",
@@ -106,12 +111,14 @@ func TestComponent_shutdownViaImpl(t *testing.T) {
 			},
 			shutdownMock{d: 500 * time.Millisecond},
 			773 * time.Millisecond,
+			nil,
 		},
 		{
 			"ImplShutdown has a user-error", // will log, but not panic
 			nil,
-			shutdownMock{err: errors.New("user error"), closesDone: true},
+			shutdownMock{err: testErr, closesDone: true},
 			0,
+			testErr,
 		},
 		{
 			"ImplShutdown times out",
@@ -122,6 +129,7 @@ func TestComponent_shutdownViaImpl(t *testing.T) {
 			},
 			shutdownMock{d: 5 * time.Second},
 			4 * time.Second,
+			lcerrors.ContextTimeoutError{Source: "Shutdown.CallTimeout"},
 		},
 		{
 			"shutdown process fails, hits completion timeout",
@@ -130,6 +138,7 @@ func TestComponent_shutdownViaImpl(t *testing.T) {
 			},
 			shutdownMock{d: 3 * time.Second},
 			2*time.Second + defaultAsyncGracePeriod,
+			lcerrors.ContextTimeoutError{Source: "Shutdown.CompletionTimeout"},
 		},
 	}
 	for _, tt := range tests {
@@ -154,7 +163,13 @@ func TestComponent_shutdownViaImpl(t *testing.T) {
 				}
 
 				// TODO: should we check this?
-				c.logError = func(string, error) {}
+				logErrorCalled := false
+				c.logError = func(stage string, err error) {
+					logErrorCalled = true
+					test.Eq(t, "shutdown (impl)", stage)
+					test.Error(t, err)
+					test.ErrorIs(t, err, tt.wantLog)
+				}
 
 				if tt.control != nil {
 					go tt.control(ctrl)
@@ -165,8 +180,11 @@ func TestComponent_shutdownViaImpl(t *testing.T) {
 				c.shutdownViaImpl(ctx)
 				test.Eq(t, tt.wantD, time.Since(t0))
 
-				wantCalled := tt.name != "already dead" // So sue me...
-				test.Eq(t, wantCalled, shutdownCalled)
+				wantShutdownCalled := tt.name != "already dead" // So sue me...
+				test.Eq(t, wantShutdownCalled, shutdownCalled)
+
+				wantLogErrorCalled := tt.wantLog != nil
+				test.Eq(t, wantLogErrorCalled, logErrorCalled)
 			})
 		})
 	}
@@ -213,9 +231,6 @@ func TestComponent_shutdownViaContext(t *testing.T) {
 				c.runCtxCancel = func() {
 					calledRunCtxCancel = true
 				}
-
-				// TODO: should we check this?
-				c.logError = func(string, error) {}
 
 				ctx, cancel := context.WithCancelCause(t.Context())
 				defer cancel(errors.New("test done"))

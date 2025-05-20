@@ -371,9 +371,6 @@ func TestComponent_waitReady_CheckOnce(t *testing.T) {
 					return ret.ready, ret.error
 				}
 
-				// TODO: should we check this?
-				c.logError = func(string, error) {}
-
 				var ctx context.Context
 				ctx, tc.cancelCtx = context.WithCancelCause(t.Context())
 				defer tc.cancelCtx(errors.New("test done"))
