@@ -17,63 +17,53 @@ import (
 
 func TestComponent_Start(t *testing.T) {
 	t.Run("happy path", func(t *testing.T) {
-		// Happy path testing is focursed on the full lifecycle of all the things Start has to invoke, as
-		// well as checking to see that the separation of concerns is honored (as best we reasonably can).
-		//
-		// It probably won't ever be perfect, since internal func calls can't easily be mocked out,
-		// but that's OK -- it doesn't need to be.
-		c := newTestingComponent(t)
+		synctest.Run(func() {
+			// Happy path testing is focursed on the full lifecycle of all the things Start has to invoke, as
+			// well as checking to see that the separation of concerns is honored (as best we reasonably can).
+			//
+			// It probably won't ever be perfect, since internal func calls can't easily be mocked out,
+			// but that's OK -- it doesn't need to be.
+			c := newTestingComponent(t)
 
-		testErr := errors.New("error for ImplRun to return")
+			testErr := errors.New("error for ImplRun to return")
 
-		c.ImplRun = func(ctx context.Context) error {
-			<-ctx.Done()
-			return testErr
-		}
+			c.ImplRun = func(ctx context.Context) error {
+				<-ctx.Done()
+				return testErr
+			}
 
-		exitNotifiedCh := make(chan error, 1)
-		c.notifyOnExited = func(err error) {
-			exitNotifiedCh <- err
-			close(exitNotifiedCh)
-		}
+			exitNotifiedCh := make(chan error, 1)
+			c.notifyOnExited = func(err error) {
+				exitNotifiedCh <- err
+				close(exitNotifiedCh)
+			}
 
-		ctx, cancel := context.WithCancelCause(t.Context())
-		defer cancel(errors.New("test ended"))
+			ctx, cancel := context.WithCancelCause(t.Context())
+			defer cancel(errors.New("test ended"))
 
-		err := c.Start(ctx)
-		test.ErrorIs(t, err, nil)
+			err := c.Start(ctx)
+			test.ErrorIs(t, err, nil)
 
-		// Things Start() sets up.
-		must.NotNil(t, c.runCtxCancel)
-		must.NotNil(t, c.doneCh)
-		testutil.ChanReadIsBlocked(t, c.doneCh)
+			// Things Start() sets up.
+			must.NotNil(t, c.runCtxCancel)
+			must.NotNil(t, c.doneCh)
+			testutil.ChanReadIsBlocked(t, c.doneCh)
 
-		// And our call state
-		testutil.ChanReadIsBlocked(t, exitNotifiedCh)
+			// And our call state
+			testutil.ChanReadIsBlocked(t, exitNotifiedCh)
 
-		// Okay, it's started, and we assume the exit monitor has also started up.
-		// Let's see that runCtxCancel works (and that it's piped into ImplRun)
-		c.runCtxCancel()
+			// Okay, it's started, and we assume the exit monitor has also started up.
+			// Let's see that runCtxCancel works (and that it's piped into ImplRun)
+			c.runCtxCancel()
 
-		// It should respond to the closure within 100ms. (Perhaps I should reach for
-		// synctest here for better reliability on high load machines)
-		select {
-		case <-time.After(100 * time.Millisecond): // FIXME: use synctest
-			t.Error("ImplRun failed to respond to runCtxCancel, or doneCh wasn't closed by Start")
-			return
-		case <-c.doneCh:
-			// Happy path
-		}
+			synctest.Wait()
 
-		// monitorExit should detect the exit and report it within 100ms.
-		select {
-		case <-time.After(100 * time.Millisecond): // FIXME: use synctest
-			t.Error("monitorExit failed to detect the exit status, or wasn't started by Start")
-			return
-		case err, ok := <-exitNotifiedCh:
-			test.True(t, ok)
-			test.ErrorIs(t, testErr, err)
-		}
+			// It should respond to ImplRun exiting..
+			testutil.ChanReadIsClosed(t, c.doneCh)
+
+			testutil.ChanReadIsOk(t, exitNotifiedCh, testErr)
+			testutil.ChanReadIsClosed(t, exitNotifiedCh)
+		})
 	})
 
 	t.Run("prevent double call", func(t *testing.T) {

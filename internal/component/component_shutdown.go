@@ -74,7 +74,6 @@ func (c *Component) shutdownViaContext(context.Context) {
 
 	c.runCtxCancel()
 
-	// FIXME: Should we use use ctx? For now, we have a fixed timeout of 100ms.
 	select {
 	case <-c.doneCh:
 		// Responded successfully, and is now exited
