@@ -19,6 +19,8 @@ func (c *Controller) controlLoop_Dying() {
 	}
 }
 
-func (c *Controller) clDyingDoShutdown(comp Component) {
-	_ = comp.Shutdown(c.ctx) // TODO: handle error
+func (c *Controller) clDyingDoShutdown(oc ownedComponent) {
+	if err := oc.comp.Shutdown(c.ctx); err != nil {
+		c.recordComponentError(oc.name, "shutdown", err)
+	}
 }

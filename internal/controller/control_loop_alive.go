@@ -38,7 +38,7 @@ func (c *Controller) clAliveDoLaunch(req launchRequest) {
 	// Even if Start() returned an error, it's possible that ImplRun has been started up. Accordingly, when we
 	// do our shutdown process, we want to shutdown this component as well.
 	c.stateMu.Lock()
-	c.components = append(c.components, req.comp)
+	c.components = append(c.components, ownedComponent{req.name, req.comp})
 	c.stateMu.Unlock()
 
 	if err := req.comp.Start(c.ctx); err != nil {

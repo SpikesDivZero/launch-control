@@ -19,6 +19,11 @@ type Component interface {
 	WaitReady(ctx context.Context, abortLoopCh <-chan struct{}) error
 }
 
+type ownedComponent struct {
+	name string
+	comp Component
+}
+
 type Controller struct {
 	ctx context.Context
 
@@ -31,7 +36,7 @@ type Controller struct {
 	requestStopCh   chan struct{}
 	requestLaunchCh chan launchRequest
 	allErrors       []error
-	components      []Component
+	components      []ownedComponent
 }
 
 func New(ctx context.Context) *Controller {

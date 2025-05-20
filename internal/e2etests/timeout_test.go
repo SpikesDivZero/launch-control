@@ -10,6 +10,7 @@ import (
 
 	"github.com/shoenig/test"
 	"github.com/spikesdivzero/launch-control"
+	"github.com/spikesdivzero/launch-control/internal/lcerrors"
 )
 
 func TestShutdownTimeout(t *testing.T) {
@@ -17,7 +18,10 @@ func TestShutdownTimeout(t *testing.T) {
 		ctrl := newController(t)
 		ctrl.Launch("test",
 			launch.WithRun(
-				func(ctx context.Context) error { return nil },
+				func(ctx context.Context) error {
+					<-ctx.Done()
+					return nil
+				},
 				func(ctx context.Context) error {
 					time.Sleep(time.Minute)
 					return nil
@@ -25,7 +29,7 @@ func TestShutdownTimeout(t *testing.T) {
 			launch.WithShutdownCallTimeout(5*time.Second))
 
 		time.AfterFunc(time.Second, func() { ctrl.RequestStop(nil) })
-		test.NoError(t, ctrl.Wait()) // TODO: should this report the timeout?
+		test.ErrorIs(t, ctrl.Wait(), lcerrors.ContextTimeoutError{Source: "Shutdown.CallTimeout"})
 	})
 }
 
@@ -42,8 +46,7 @@ func TestSSWStartTimeout(t *testing.T) {
 			launch.WithStartStopCallTimeouts(time.Second, time.Second))
 
 		// The start timeout error should result in the system automatically shutting down
-		// TOOD: should have a better error than "component test run exited: context deadline exceeded"
-		test.ErrorIs(t, ctrl.Wait(), context.DeadlineExceeded)
+		test.ErrorIs(t, ctrl.Wait(), lcerrors.ContextTimeoutError{Source: "StartStopWrapper.StartTimeout"})
 	})
 }
 
@@ -61,7 +64,6 @@ func TestSSWStopTimeout(t *testing.T) {
 
 		time.AfterFunc(time.Second, func() { ctrl.RequestStop(nil) })
 
-		// TOOD: should have a better error than "component test run exited: context deadline exceeded"
-		test.ErrorIs(t, ctrl.Wait(), context.DeadlineExceeded)
+		test.ErrorIs(t, ctrl.Wait(), lcerrors.ContextTimeoutError{Source: "StartStopWrapper.StopTimeout"})
 	})
 }

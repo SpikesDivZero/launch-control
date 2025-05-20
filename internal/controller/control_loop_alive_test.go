@@ -75,7 +75,8 @@ func TestController_clAliveDoLaunch(t *testing.T) {
 		test.True(t, mc.Recorder.Start.Called)
 		test.True(t, mc.Recorder.WaitReady.Called)
 		test.Len(t, 1, c.components)
-		test.Eq(t, mc, c.components[0].(*testutil.MockComponent))
+		test.Eq(t, req.name, c.components[0].name)
+		test.Eq(t, mc, c.components[0].comp.(*testutil.MockComponent))
 
 		test.Eq(t, c.requestStopCh, mc.Recorder.WaitReady.AbortLoopCh)
 
@@ -94,7 +95,8 @@ func TestController_clAliveDoLaunch(t *testing.T) {
 		test.True(t, mc.Recorder.Start.Called)
 		test.False(t, mc.Recorder.WaitReady.Called)
 		test.Len(t, 1, c.components)
-		test.Eq(t, mc, c.components[0].(*testutil.MockComponent))
+		test.Eq(t, req.name, c.components[0].name)
+		test.Eq(t, mc, c.components[0].comp.(*testutil.MockComponent))
 
 		testutil.ChanReadIsClosed(t, c.requestStopCh)
 		test.ErrorIs(t, c.Err(), testErr)
@@ -112,7 +114,8 @@ func TestController_clAliveDoLaunch(t *testing.T) {
 		test.True(t, mc.Recorder.Start.Called)
 		test.True(t, mc.Recorder.WaitReady.Called)
 		test.Len(t, 1, c.components)
-		test.Eq(t, mc, c.components[0].(*testutil.MockComponent))
+		test.Eq(t, req.name, c.components[0].name)
+		test.Eq(t, mc, c.components[0].comp.(*testutil.MockComponent))
 
 		testutil.ChanReadIsClosed(t, c.requestStopCh)
 		test.ErrorIs(t, c.Err(), testErr)

@@ -1,11 +1,13 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"testing"
 
 	"github.com/shoenig/test"
+	"github.com/spikesdivzero/launch-control/internal/lcerrors"
 	"github.com/spikesdivzero/launch-control/internal/testutil"
 )
 
@@ -38,7 +40,7 @@ func TestController_controlLoop_Dying(t *testing.T) {
 			mc := &testutil.MockComponent{}
 			mc.ShutdownOptions.Hook = func() { gotShutdownOrder = append(gotShutdownOrder, name) }
 
-			c.components = append(c.components, mc)
+			c.components = append(c.components, ownedComponent{name, mc})
 		}
 
 		// Now let it run
@@ -57,9 +59,23 @@ func TestController_controlLoop_Dying(t *testing.T) {
 }
 
 func TestController_clDyingDoShutdown(t *testing.T) {
-	// TODO: the logic our implementation still needs to be fleshed out, so we'll just do the minimum here.
-	c := newTestingController(t, lifecycleDying)
-	mc := &testutil.MockComponent{}
-	c.clDyingDoShutdown(mc)
-	test.True(t, mc.Recorder.Shutdown.Called)
+	t.Run("happy", func(t *testing.T) {
+		c := newTestingController(t, lifecycleDying)
+		mc := &testutil.MockComponent{}
+		c.clDyingDoShutdown(ownedComponent{"test-comp", mc})
+		test.True(t, mc.Recorder.Shutdown.Called)
+	})
+
+	t.Run("returns err", func(t *testing.T) {
+		c := newTestingController(t, lifecycleDying)
+		mc := &testutil.MockComponent{}
+		mc.ShutdownOptions.Err = errors.New("test error")
+		c.clDyingDoShutdown(ownedComponent{"test-comp", mc})
+		test.True(t, mc.Recorder.Shutdown.Called)
+		test.ErrorIs(t, c.Err(), lcerrors.ComponentError{
+			Name:  "test-comp",
+			Stage: "shutdown",
+			Err:   mc.ShutdownOptions.Err,
+		})
+	})
 }
