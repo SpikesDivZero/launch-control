@@ -129,7 +129,7 @@ func TestComponent_shutdownViaImpl(t *testing.T) {
 				c.c.ShutdownOptions.CompletionTimeout = 2 * time.Second
 			},
 			shutdownMock{d: 3 * time.Second},
-			2*time.Second + 100*time.Millisecond, // FIXME: hard-coded 100ms delay
+			2*time.Second + defaultAsyncGracePeriod,
 		},
 	}
 	for _, tt := range tests {
@@ -188,17 +188,17 @@ func TestComponent_shutdownViaContext(t *testing.T) {
 			0,
 		},
 		{
-			"responds within timeout", // FIXME: assumes hard-coded 100ms delay
+			"responds within timeout",
 			func(c control) {
-				time.Sleep(45 * time.Millisecond)
+				time.Sleep(defaultAsyncGracePeriod / 2)
 				c.closeDone()
 			},
-			45 * time.Millisecond,
+			defaultAsyncGracePeriod / 2,
 		},
 		{
 			"timeout",
 			nil,
-			100 * time.Millisecond, // FIXME: assumes hard-coded 100ms delay
+			defaultAsyncGracePeriod,
 		},
 	}
 	for _, tt := range tests {

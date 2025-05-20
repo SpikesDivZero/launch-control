@@ -25,7 +25,7 @@ func TestMockComponent_ConnectController(t *testing.T) {
 	}
 
 	mc := &MockComponent{}
-	mc.ConnectController(testLogError, testNotify)
+	mc.ConnectController(testLogError, testNotify, 871*time.Millisecond)
 
 	testErr := errors.New("boop")
 	mc.Recorder.Connect.NotifyOnExited(testErr)
@@ -34,6 +34,8 @@ func TestMockComponent_ConnectController(t *testing.T) {
 	mc.Recorder.Connect.LogError("in-test", testErr)
 	test.Eq(t, testLogErrorGot.stage, "in-test")
 	test.ErrorIs(t, testLogErrorGot.err, testErr)
+
+	test.Eq(t, 871*time.Millisecond, mc.Recorder.Connect.AsyncGracePeriod)
 }
 
 func TestMockComponent_Start(t *testing.T) {

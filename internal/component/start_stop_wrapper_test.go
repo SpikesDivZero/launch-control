@@ -15,14 +15,11 @@ import (
 	"github.com/spikesdivzero/launch-control/internal/testutil"
 )
 
-func newStartStopWrapper(*testing.T) StartStopWrapper {
-	return StartStopWrapper{
-		ImplStart: func(context.Context) error { panic("ImplStart called, but not defined in test") },
-		ImplStop:  func(context.Context) error { panic("ImplStop called, but not defined in test") },
-
-		StartTimeout: NoTimeout,
-		StopTimeout:  NoTimeout,
-	}
+func newStartStopWrapper(t *testing.T) *StartStopWrapper {
+	w := NewStartStopWrapperFor(newTestingComponent(t))
+	w.ImplStart = func(context.Context) error { panic("ImplStart called, but not defined in test") }
+	w.ImplStop = func(context.Context) error { panic("ImplStop called, but not defined in test") }
+	return w
 }
 
 func TestStartStopWrapper_Run(t *testing.T) {

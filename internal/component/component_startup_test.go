@@ -58,7 +58,7 @@ func TestComponent_Start(t *testing.T) {
 		// It should respond to the closure within 100ms. (Perhaps I should reach for
 		// synctest here for better reliability on high load machines)
 		select {
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(100 * time.Millisecond): // FIXME: use synctest
 			t.Error("ImplRun failed to respond to runCtxCancel, or doneCh wasn't closed by Start")
 			return
 		case <-c.doneCh:
@@ -67,7 +67,7 @@ func TestComponent_Start(t *testing.T) {
 
 		// monitorExit should detect the exit and report it within 100ms.
 		select {
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(100 * time.Millisecond): // FIXME: use synctest
 			t.Error("monitorExit failed to detect the exit status, or wasn't started by Start")
 			return
 		case err, ok := <-exitNotifiedCh:
@@ -132,11 +132,10 @@ func TestComponent_monitorExit(t *testing.T) {
 			func(c control) {
 				time.Sleep(750 * time.Millisecond)
 				c.ctxCancel()
-				// We never write to the channel, so it'll timeout 100ms from this point
-				// FIXME: 100ms assumption is based on hard-coded value in main code, which is also a FIXME
+				// We never write to the channel, so it'll timeout (from this point) after the async grace period
 			},
 			lcerrors.ErrMonitorExitedWhileStillAlive,
-			850 * time.Millisecond,
+			750*time.Millisecond + defaultAsyncGracePeriod,
 		},
 
 		{
@@ -144,33 +143,33 @@ func TestComponent_monitorExit(t *testing.T) {
 			func(c control) {
 				time.Sleep(5 * time.Second)
 				c.ctxCancel()
-				time.Sleep(50 * time.Millisecond) // FIXME: 1/2 of hard-coded value, for testing
+				time.Sleep(defaultAsyncGracePeriod / 2)
 				c.runErrCh <- nil
 			},
 			nil,
-			5*time.Second + 50*time.Millisecond,
+			5*time.Second + defaultAsyncGracePeriod/2,
 		},
 		{
 			"select 2 ok err",
 			func(c control) {
 				time.Sleep(7 * time.Second)
 				c.ctxCancel()
-				time.Sleep(50 * time.Millisecond) // FIXME: 1/2 of hard-coded value, for testing
+				time.Sleep(defaultAsyncGracePeriod / 2)
 				c.runErrCh <- testErr
 			},
 			testErr,
-			7*time.Second + 50*time.Millisecond,
+			7*time.Second + defaultAsyncGracePeriod/2,
 		},
 		{
 			"select 2 premature",
 			func(c control) {
 				time.Sleep(6 * time.Second)
 				c.ctxCancel()
-				time.Sleep(50 * time.Millisecond) // FIXME: 1/2 of hard-coded value, for testing
+				time.Sleep(defaultAsyncGracePeriod / 2)
 				close(c.runErrCh)
 			},
 			errPrematureChannelClose,
-			6*time.Second + 50*time.Millisecond,
+			6*time.Second + defaultAsyncGracePeriod/2,
 		},
 	}
 	for _, tt := range tests {

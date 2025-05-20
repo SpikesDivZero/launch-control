@@ -93,7 +93,7 @@ func (c *Component) waitReady_CheckOnce(ctx context.Context) (bool, error) {
 	default:
 	}
 
-	resultCh := AsyncCall(ctx, "CheckReady.CallTimeout", c.CheckReadyOptions.CallTimeout, 100*time.Millisecond,
+	resultCh := AsyncCall(ctx, "CheckReady.CallTimeout", c.CheckReadyOptions.CallTimeout, c.asyncGracePeriod,
 		func(ctx context.Context) Pair[bool, error] {
 			r, err := c.ImplCheckReady(ctx)
 			return Pair[bool, error]{r, err}

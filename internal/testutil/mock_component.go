@@ -30,9 +30,10 @@ type MockComponent struct {
 
 	Recorder struct {
 		Connect struct {
-			Called         bool
-			LogError       func(string, error)
-			NotifyOnExited func(error)
+			Called           bool
+			LogError         func(string, error)
+			NotifyOnExited   func(error)
+			AsyncGracePeriod time.Duration
 		}
 		Start struct {
 			Called bool
@@ -53,11 +54,13 @@ type MockComponent struct {
 func (mc *MockComponent) ConnectController(
 	logError func(string, error),
 	notifyOnExited func(error),
+	asyncGracePeriod time.Duration,
 ) {
 	rc := &mc.Recorder.Connect
 	rc.Called = true
 	rc.LogError = logError
 	rc.NotifyOnExited = notifyOnExited
+	rc.AsyncGracePeriod = asyncGracePeriod
 }
 
 func (mc *MockComponent) Start(ctx context.Context) error {

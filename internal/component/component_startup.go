@@ -44,7 +44,7 @@ func (c *Component) monitorExit(ctx context.Context, runErrCh <-chan error) {
 	}
 
 	select {
-	case <-time.After(100 * time.Millisecond): // FIXME: dynamic value, provided by controller?
+	case <-time.After(c.asyncGracePeriod):
 		c.logError("monitor-exit", lcerrors.ErrMonitorExitedWhileStillAlive)
 
 	case err, ok := <-runErrCh:

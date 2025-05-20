@@ -56,11 +56,14 @@ func TestComponent_ConnectController(t *testing.T) {
 		test.ErrorIs(t, err, testErr)
 	}
 
-	c.ConnectController(testLogError, testNotify)
+	c.ConnectController(testLogError, testNotify, 242*time.Millisecond)
 
 	must.NotNil(t, c.notifyOnExited)
 	c.logError("in-test", testErr)
 	test.True(t, calledTestLogError)
+
 	c.notifyOnExited(testErr)
 	test.True(t, calledTestNotify)
+
+	test.Eq(t, 242*time.Millisecond, c.asyncGracePeriod)
 }

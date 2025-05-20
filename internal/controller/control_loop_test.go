@@ -32,7 +32,7 @@ func TestController_controlLoop(t *testing.T) {
 		// The internal state changes are assessed via panic calls in the Alive and Dying funcs
 
 		c.RequestStop(nil)
-		time.Sleep(dyingMonitorExitReportingGracePeriod)
+		time.Sleep(c.AsyncGracePeriod)
 		synctest.Wait()
 
 		testutil.ChanReadIsClosed(t, innerDone)

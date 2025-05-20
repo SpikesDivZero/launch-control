@@ -7,6 +7,8 @@ import (
 )
 
 type StartStopWrapper struct {
+	comp *Component
+
 	ImplStart func(context.Context) error
 	ImplStop  func(context.Context) error
 
@@ -15,6 +17,15 @@ type StartStopWrapper struct {
 
 	stateMu       sync.Mutex
 	requestStopCh chan struct{}
+}
+
+func NewStartStopWrapperFor(c *Component) *StartStopWrapper {
+	return &StartStopWrapper{
+		comp: c,
+
+		StartTimeout: NoTimeout,
+		StopTimeout:  NoTimeout,
+	}
 }
 
 func (ssw *StartStopWrapper) Run(ctx context.Context) error {
@@ -56,7 +67,7 @@ func (ssw *StartStopWrapper) doCall(
 	timeout time.Duration,
 	impl func(context.Context) error,
 ) error {
-	err, callErr := (<-AsyncCall(ctx, timeoutSource, timeout, 100*time.Millisecond, impl)).Values()
+	err, callErr := (<-AsyncCall(ctx, timeoutSource, timeout, ssw.comp.asyncGracePeriod, impl)).Values()
 	if callErr != nil {
 		return callErr
 	}

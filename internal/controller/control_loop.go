@@ -21,8 +21,6 @@ type launchRequest struct {
 	doneCh chan struct{}
 }
 
-const dyingMonitorExitReportingGracePeriod = 100 * time.Millisecond
-
 // The main entry point for our controlLoop. It's job is just to call the different lifecycle stages in order.
 // If we skip from New->Dying, then this shouldn't ever be invoked?
 func (c *Controller) controlLoop() {
@@ -51,7 +49,7 @@ func (c *Controller) controlLoop() {
 	// or when GOMAXPROCS > 1 and an internal reschedule/rebalance happens between go processors)
 	//
 	// No, a sleep isn't perfect, but it's arguably better than a Gosched call.
-	time.Sleep(dyingMonitorExitReportingGracePeriod)
+	time.Sleep(c.AsyncGracePeriod)
 }
 
 func (c *Controller) clAssertState(in string, want lifecycleState) {

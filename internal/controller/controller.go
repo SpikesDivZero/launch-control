@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/spikesdivzero/launch-control/internal/lcerrors"
 )
@@ -13,6 +14,7 @@ type Component interface {
 	ConnectController(
 		logError func(string, error),
 		notifyOnExited func(error),
+		asyncGracePeriod time.Duration,
 	)
 	Start(ctx context.Context) error
 	Shutdown(ctx context.Context) error
@@ -27,7 +29,8 @@ type ownedComponent struct {
 type Controller struct {
 	ctx context.Context
 
-	Log *slog.Logger
+	Log              *slog.Logger
+	AsyncGracePeriod time.Duration
 
 	// Control Loop related bits.
 	stateMu         sync.Mutex
@@ -40,11 +43,11 @@ type Controller struct {
 }
 
 func New(ctx context.Context) *Controller {
-	log := slog.New(slog.DiscardHandler)
 	return &Controller{
 		ctx: ctx,
 
-		Log: log,
+		Log:              slog.New(slog.DiscardHandler),
+		AsyncGracePeriod: 100 * time.Millisecond,
 
 		lifecycleState:  lifecycleNew,
 		doneCh:          make(chan struct{}),
@@ -61,7 +64,8 @@ func (c *Controller) Launch(name string, comp Component) {
 		func(err error) {
 			c.recordComponentError(name, "run exited", err)
 			c.RequestStop(nil)
-		})
+		},
+		c.AsyncGracePeriod)
 
 	<-c.sendLaunchRequest(name, comp)
 }

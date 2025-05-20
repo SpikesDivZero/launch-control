@@ -344,8 +344,7 @@ func TestComponent_waitReady_CheckOnce(t *testing.T) {
 			"call timeout",
 			func(tc testControl) { tc.c.CheckReadyOptions.CallTimeout = time.Second },
 			checkReturn{true, nil, 2 * time.Second},
-			// FIXME: hard-coded 100ms grace period
-			wantResult{false, context.DeadlineExceeded, time.Second + 100*time.Millisecond},
+			wantResult{false, context.DeadlineExceeded, time.Second + defaultAsyncGracePeriod},
 		},
 		{
 			"interrupt: run exits",

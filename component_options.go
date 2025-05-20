@@ -50,12 +50,10 @@ type componentBuildState struct {
 }
 
 func newComponentBuildState(name string) *componentBuildState {
+	c := component.New(name)
 	return &componentBuildState{
-		c: component.New(name),
-		ssw: &component.StartStopWrapper{
-			StartTimeout: NoTimeout,
-			StopTimeout:  NoTimeout,
-		},
+		c:   c,
+		ssw: component.NewStartStopWrapperFor(c),
 	}
 }
 

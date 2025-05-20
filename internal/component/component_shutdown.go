@@ -50,8 +50,7 @@ func (c *Component) shutdownViaImpl(ctx context.Context) {
 	// Rather than over-complicate things, this method will focus on calling ImplShutdown and
 	// waiting on it to return. Only after that happens will it check/wait on ImplRun being done.
 
-	// FIXME: use a call grace timeout provided by controller, instead of const 100ms?
-	resultCh := AsyncCall(ctx, "Shutdown.CallTimeout", c.ShutdownOptions.CallTimeout, 100*time.Millisecond, c.ImplShutdown)
+	resultCh := AsyncCall(ctx, "Shutdown.CallTimeout", c.ShutdownOptions.CallTimeout, c.asyncGracePeriod, c.ImplShutdown)
 	if userErr, callErr := (<-resultCh).Values(); callErr != nil {
 		c.logError("shutdown (impl)", callErr)
 	} else if userErr != nil {
@@ -79,7 +78,7 @@ func (c *Component) shutdownViaContext(context.Context) {
 	select {
 	case <-c.doneCh:
 		// Responded successfully, and is now exited
-	case <-time.After(100 * time.Millisecond): // FIXME: time provided by controller?
+	case <-time.After(c.asyncGracePeriod):
 		// Did not respond, and is still alive
 	}
 }
