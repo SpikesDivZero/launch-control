@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"math/rand/v2"
 	"testing"
 	"time"
@@ -13,43 +12,30 @@ import (
 	"github.com/shoenig/test/must"
 )
 
-// Same as in top-level package, but copied here to avoid import
-const NoTimeout time.Duration = 50 * (time.Hour * 24 * 365)
-
 func newTestingComponent(*testing.T) *Component {
-	return &Component{
-		Name: fmt.Sprintf("testing-comp-%d", rand.Int32()),
+	c := New(fmt.Sprintf("testing-comp-%d", rand.Int32()))
 
-		ImplRun: func(ctx context.Context) error {
-			panic("TestingComponent.ImplRun not defined, but used in test")
-		},
-
-		ImplShutdown: func(ctx context.Context) error {
-			panic("TestingComponent.ImplShutdown not defined, but used in test")
-		},
-		ShutdownOptions: ShutdownOptions{
-			CallTimeout:       NoTimeout,
-			CompletionTimeout: NoTimeout,
-		},
-
-		ImplCheckReady: func(ctx context.Context) (bool, error) {
-			panic("TestingComponent.ImplCheckReady not defined, but used in test")
-		},
-		CheckReadyOptions: CheckReadyOptions{
-			CallTimeout: NoTimeout,
-			Backoff: func() time.Duration {
-				panic("TestingComponent.CheckReadyOptions.Backoff not defined, but used in test")
-			},
-			MaxAttempts: math.MaxInt,
-		},
-
-		logError: func(stage string, err error) {
-			panic("TestingComponent.logError not defined but used in test")
-		},
-		notifyOnExited: func(err error) {
-			panic("TestingComponent.notifyOnExited not defined but used in test")
-		},
+	c.ImplRun = func(ctx context.Context) error {
+		panic("TestingComponent.ImplRun not defined, but used in test")
 	}
+	c.ImplShutdown = func(ctx context.Context) error {
+		panic("TestingComponent.ImplShutdown not defined, but used in test")
+	}
+	c.ImplCheckReady = func(ctx context.Context) (bool, error) {
+		panic("TestingComponent.ImplCheckReady not defined, but used in test")
+	}
+	c.CheckReadyOptions.Backoff = func() time.Duration {
+		panic("TestingComponent.CheckReadyOptions.Backoff not defined, but used in test")
+	}
+
+	c.logError = func(stage string, err error) {
+		panic("TestingComponent.logError not defined but used in test")
+	}
+	c.notifyOnExited = func(err error) {
+		panic("TestingComponent.notifyOnExited not defined but used in test")
+	}
+
+	return c
 }
 
 func TestComponent_ConnectController(t *testing.T) {

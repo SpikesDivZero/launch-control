@@ -51,19 +51,7 @@ type componentBuildState struct {
 
 func newComponentBuildState(name string) *componentBuildState {
 	return &componentBuildState{
-		c: &component.Component{
-			Name: name,
-
-			ShutdownOptions: component.ShutdownOptions{
-				CallTimeout:       NoTimeout,
-				CompletionTimeout: NoTimeout,
-			},
-			CheckReadyOptions: component.CheckReadyOptions{
-				CallTimeout: NoTimeout,
-				Backoff:     ConstBackoff(0),
-				MaxAttempts: math.MaxInt,
-			},
-		},
+		c: component.New(name),
 		ssw: &component.StartStopWrapper{
 			StartTimeout: NoTimeout,
 			StopTimeout:  NoTimeout,

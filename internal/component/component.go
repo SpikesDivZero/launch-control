@@ -2,8 +2,12 @@ package component
 
 import (
 	"context"
+	"math"
 	"time"
 )
+
+// Same as in top-level package, but copied here to avoid import
+const NoTimeout time.Duration = 50 * (time.Hour * 24 * 365)
 
 type ShutdownOptions struct {
 	CallTimeout       time.Duration
@@ -34,6 +38,22 @@ type Component struct {
 	// Lifecycle-related state, created in [Start]
 	runCtxCancel context.CancelFunc
 	doneCh       <-chan struct{}
+}
+
+func New(name string) *Component {
+	return &Component{
+		Name: name,
+
+		ShutdownOptions: ShutdownOptions{
+			CallTimeout:       NoTimeout,
+			CompletionTimeout: NoTimeout,
+		},
+		CheckReadyOptions: CheckReadyOptions{
+			CallTimeout: NoTimeout,
+			Backoff:     func() time.Duration { return 0 },
+			MaxAttempts: math.MaxInt,
+		},
+	}
 }
 
 func (c *Component) ConnectController(
