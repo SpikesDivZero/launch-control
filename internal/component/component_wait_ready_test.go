@@ -341,6 +341,12 @@ func TestComponent_waitReady_CheckOnce(t *testing.T) {
 			wantResult{false, errUserReturned, 0},
 		},
 		{
+			"good call, result=true, generic user-error",
+			nil,
+			checkReturn{true, errUserReturned, 0},
+			wantResult{false, errUserReturned, 0},
+		},
+		{
 			"call timeout",
 			func(tc testControl) { tc.c.CheckReadyOptions.CallTimeout = time.Second },
 			checkReturn{true, nil, 2 * time.Second},

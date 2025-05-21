@@ -105,7 +105,8 @@ func (c *Component) waitReady_CheckOnce(ctx context.Context) (bool, error) {
 		if callErr != nil {
 			return false, callErr
 		}
-		return rp.Values()
+		ready, err := rp.Values()
+		return (ready && err == nil), err // err means bool is meaningless
 
 	case <-c.doneCh:
 		return false, lcerrors.ErrWaitReadyComponentExited
