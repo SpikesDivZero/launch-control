@@ -13,7 +13,7 @@ import (
 	"github.com/spikesdivzero/launch-control/internal/lcerrors"
 )
 
-func TestShutdownTimeout(t *testing.T) {
+func TestShutdownCallTimeout(t *testing.T) {
 	synctest.Run(func() {
 		ctrl := newController(t)
 		ctrl.Launch("test",
@@ -33,7 +33,27 @@ func TestShutdownTimeout(t *testing.T) {
 	})
 }
 
-func TestSSWStartTimeout(t *testing.T) {
+func TestShutdownCompletionTimeout(t *testing.T) {
+	synctest.Run(func() {
+		ctrl := newController(t)
+		ctrl.Launch("test",
+			launch.WithRun(
+				func(ctx context.Context) error {
+					<-ctx.Done()
+					return nil
+				},
+				func(ctx context.Context) error {
+					time.Sleep(time.Minute)
+					return nil
+				}),
+			launch.WithShutdownCompletionTimeout(5*time.Second))
+
+		time.AfterFunc(time.Second, func() { ctrl.RequestStop(nil) })
+		test.ErrorIs(t, ctrl.Wait(), lcerrors.ContextTimeoutError{Source: "Shutdown.CompletionTimeout"})
+	})
+}
+
+func TestSSWStartCallTimeout(t *testing.T) {
 	synctest.Run(func() {
 		ctrl := newController(t)
 		ctrl.Launch("test",
@@ -50,7 +70,7 @@ func TestSSWStartTimeout(t *testing.T) {
 	})
 }
 
-func TestSSWStopTimeout(t *testing.T) {
+func TestSSWStopCallTimeout(t *testing.T) {
 	synctest.Run(func() {
 		ctrl := newController(t)
 		ctrl.Launch("test",
