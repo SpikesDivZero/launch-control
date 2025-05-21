@@ -1,6 +1,7 @@
 package e2etests
 
 import (
+	"context"
 	"testing"
 
 	"github.com/spikesdivzero/launch-control"
@@ -11,4 +12,10 @@ import (
 
 func newController(t *testing.T) launch.Controller {
 	return launch.NewController(t.Context())
+}
+
+func withDummyStartStop() launch.ComponentOption {
+	return launch.WithStartStop(
+		func(context.Context) error { return nil },
+		func(context.Context) error { return nil })
 }

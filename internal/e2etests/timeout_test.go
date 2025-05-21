@@ -87,3 +87,17 @@ func TestSSWStopCallTimeout(t *testing.T) {
 		test.ErrorIs(t, ctrl.Wait(), lcerrors.ContextTimeoutError{Source: "StartStopWrapper.StopTimeout"})
 	})
 }
+
+func TestReadyCallTimeout(t *testing.T) {
+	synctest.Run(func() {
+		ctrl := newController(t)
+		ctrl.Launch("test", withDummyStartStop(),
+			launch.WithCheckReady(func(ctx context.Context) (bool, error) {
+				time.Sleep(time.Minute)
+				return true, nil
+			}),
+			launch.WithCheckReadyCallTimeout(2*time.Second))
+
+		test.ErrorIs(t, ctrl.Wait(), lcerrors.ContextTimeoutError{Source: "CheckReady.CallTimeout"})
+	})
+}
