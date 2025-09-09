@@ -1,5 +1,3 @@
-//go:build goexperiment.synctest
-
 package e2etests
 
 import (
@@ -16,7 +14,7 @@ import (
 )
 
 func TestReadyReturnsSuccess(t *testing.T) {
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		c := newController(t)
 
 		numCalls := 0
@@ -43,7 +41,7 @@ func TestReadyReturnsSuccess(t *testing.T) {
 }
 
 func TestReadyReturnsError(t *testing.T) {
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		c := newController(t)
 
 		testErr := errors.New("fancy feast")
@@ -62,7 +60,7 @@ func TestReadyReturnsError(t *testing.T) {
 }
 
 func TestReadyMaxAttempts(t *testing.T) {
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		c := newController(t)
 
 		numCalls := 0
@@ -86,7 +84,7 @@ func TestReadyMaxAttempts(t *testing.T) {
 }
 
 func TestReadyBackoff(t *testing.T) {
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		c := newController(t)
 
 		// synctest mocks time, so we want it at 0 to for the first check.

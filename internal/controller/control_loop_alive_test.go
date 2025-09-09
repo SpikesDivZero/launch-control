@@ -1,5 +1,3 @@
-//go:build goexperiment.synctest
-
 package controller
 
 import (
@@ -19,7 +17,7 @@ func TestController_controlLoop_Alive(t *testing.T) {
 	})
 
 	t.Run("main loop", func(t *testing.T) {
-		synctest.Run(func() {
+		synctest.Test(t, func(t *testing.T) {
 			c := newTestingController(t, lifecycleAlive)
 
 			clExited := make(chan struct{})

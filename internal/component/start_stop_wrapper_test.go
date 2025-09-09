@@ -1,5 +1,3 @@
-//go:build goexperiment.synctest
-
 package component
 
 import (
@@ -34,8 +32,7 @@ func TestStartStopWrapper_Run(t *testing.T) {
 
 	// Well, mostly happy. When start returns nil, both should be called, and it should return the final error from Stop.
 	t.Run("happy", func(t *testing.T) {
-		synctest.Run(func() {
-
+		synctest.Test(t, func(t *testing.T) {
 			mc := &testutil.MockComponent{}
 			mc.ShutdownOptions.Err = errors.New("fancy")
 

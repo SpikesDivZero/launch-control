@@ -1,5 +1,3 @@
-//go:build goexperiment.synctest
-
 package controller
 
 import (
@@ -56,7 +54,7 @@ func TestNew(t *testing.T) {
 func TestController_Launch(t *testing.T) {
 	// The bulk of the launch logic is written in Controller.sendLaunchRequest, so is already tested elsewhere.
 	// Here, we're mainly just looking to do a mini-test that Launch waits for the returned doneCh to be closed.
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		c := newTestingController(t, lifecycleAlive)
 		mc := &testutil.MockComponent{}
 
@@ -183,7 +181,7 @@ func TestController_recordComponentError(t *testing.T) {
 
 func TestController_sendLaunchRequest(t *testing.T) {
 	t.Run("from New", func(t *testing.T) {
-		synctest.Run(func() {
+		synctest.Test(t, func(t *testing.T) {
 			// This test case is a bit more than a unit, since it'll launch the control loop.
 			// Feels unavoidable, and I don't like it, but not much I can do about it.
 			c := newTestingController(t, lifecycleNew)
@@ -205,7 +203,7 @@ func TestController_sendLaunchRequest(t *testing.T) {
 	})
 
 	t.Run("from Alive", func(t *testing.T) {
-		synctest.Run(func() {
+		synctest.Test(t, func(t *testing.T) {
 			c := newTestingController(t, lifecycleAlive)
 			mc := &testutil.MockComponent{}
 
@@ -225,7 +223,7 @@ func TestController_sendLaunchRequest(t *testing.T) {
 
 	t.Run("from Dead/Dying", func(t *testing.T) {
 		for _, state := range []lifecycleState{lifecycleDying, lifecycleDead} {
-			synctest.Run(func() {
+			synctest.Test(t, func(t *testing.T) {
 				c := newTestingController(t, state)
 				mc := &testutil.MockComponent{}
 
@@ -302,7 +300,7 @@ func TestController_RequestStop(t *testing.T) {
 }
 
 func TestController_Wait(t *testing.T) {
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		c := newTestingController(t, lifecycleNew)
 
 		resultCh := make(chan error)

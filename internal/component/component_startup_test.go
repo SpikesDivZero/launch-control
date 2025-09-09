@@ -1,5 +1,3 @@
-//go:build goexperiment.synctest
-
 package component
 
 import (
@@ -17,7 +15,7 @@ import (
 
 func TestComponent_Start(t *testing.T) {
 	t.Run("happy path", func(t *testing.T) {
-		synctest.Run(func() {
+		synctest.Test(t, func(t *testing.T) {
 			// Happy path testing is focursed on the full lifecycle of all the things Start has to invoke, as
 			// well as checking to see that the separation of concerns is honored (as best we reasonably can).
 			//
@@ -164,7 +162,7 @@ func TestComponent_monitorExit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			synctest.Run(func() {
+			synctest.Test(t, func(t *testing.T) {
 				c := newTestingComponent(t)
 
 				// We use a channel to test the result here so we can check timings.

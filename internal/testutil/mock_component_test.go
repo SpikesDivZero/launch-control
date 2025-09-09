@@ -1,5 +1,3 @@
-//go:build goexperiment.synctest
-
 package testutil
 
 import (
@@ -39,7 +37,7 @@ func TestMockComponent_ConnectController(t *testing.T) {
 }
 
 func TestMockComponent_Start(t *testing.T) {
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		mc := &MockComponent{}
 		test.False(t, mc.Recorder.Start.Called)
 
@@ -73,7 +71,7 @@ func TestMockComponent_Start(t *testing.T) {
 }
 
 func TestMockComponent_Shutdown(t *testing.T) {
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		mc := &MockComponent{}
 		test.False(t, mc.Recorder.Shutdown.Called)
 
@@ -107,7 +105,7 @@ func TestMockComponent_Shutdown(t *testing.T) {
 }
 
 func TestMockComponent_WaitReady(t *testing.T) {
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		mc := &MockComponent{}
 		test.False(t, mc.Recorder.WaitReady.Called)
 

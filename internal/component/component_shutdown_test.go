@@ -1,5 +1,3 @@
-//go:build goexperiment.synctest
-
 package component
 
 import (
@@ -18,7 +16,7 @@ import (
 func TestComponent_Shutdown(t *testing.T) {
 	for _, wantErr := range []bool{false, true} {
 		t.Run(fmt.Sprintf("wantErr %v", wantErr), func(t *testing.T) {
-			synctest.Run(func() {
+			synctest.Test(t, func(t *testing.T) {
 				ctx, cancel := context.WithCancelCause(t.Context())
 				defer cancel(errors.New("test done"))
 
@@ -143,7 +141,7 @@ func TestComponent_shutdownViaImpl(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			synctest.Run(func() {
+			synctest.Test(t, func(t *testing.T) {
 				ctx, cancel := context.WithCancelCause(t.Context())
 				defer cancel(errors.New("test done"))
 
@@ -185,6 +183,10 @@ func TestComponent_shutdownViaImpl(t *testing.T) {
 
 				wantLogErrorCalled := tt.wantLog != nil
 				test.Eq(t, wantLogErrorCalled, logErrorCalled)
+
+				// HACK(go1.25 upgrade): some of our test coroutines run longer than our main test, causing a panic.
+				// Sleep at end fixes this, for now. I should redo this later on to be smarter.
+				time.Sleep(5 * time.Minute)
 			})
 		})
 	}
@@ -221,7 +223,7 @@ func TestComponent_shutdownViaContext(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			synctest.Run(func() {
+			synctest.Test(t, func(t *testing.T) {
 				ctrl := control{}
 
 				c := newTestingComponent(t)

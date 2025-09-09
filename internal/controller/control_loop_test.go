@@ -1,5 +1,3 @@
-//go:build goexperiment.synctest
-
 package controller
 
 import (
@@ -15,7 +13,7 @@ import (
 func init() { _ = lifecycleState(-1).String() }
 
 func TestController_controlLoop(t *testing.T) {
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		// This ends up being another broader test instead of a unit test, but I think that's OK with me, since
 		// I want to ensure it runs normally.
 		c := newTestingController(t, lifecycleAlive)

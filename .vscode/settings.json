@@ -1,8 +1,0 @@
-{
-    "go.toolsEnvVars": {
-        "GOEXPERIMENT": "synctest",
-    },
-    "go.testEnvVars": {
-        "GOEXPERIMENT": "synctest",
-    }
-}

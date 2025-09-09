@@ -1,5 +1,3 @@
-//go:build goexperiment.synctest
-
 package e2etests
 
 import (
@@ -15,7 +13,7 @@ import (
 
 // We shouldn't panic if Wait is called with no prior calls to Launch.
 func TestStopWaitWithNoComponents(t *testing.T) {
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		ctrl := newController(t)
 
 		err := errors.New("hello")
@@ -27,7 +25,7 @@ func TestStopWaitWithNoComponents(t *testing.T) {
 }
 
 func TestRunExitingWithErrorCausesShutdown(t *testing.T) {
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		ctrl := newController(t)
 
 		err := errors.New("boop")
@@ -51,7 +49,7 @@ func TestRunExitingWithErrorCausesShutdown(t *testing.T) {
 
 // Similar, but returns no error. The mere fact that a component exited is enough to cause a shutdown
 func TestRunExitingWithNoErrorCausesShutdown(t *testing.T) {
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		ctrl := newController(t)
 
 		ctrl.Launch("one", launch.WithStartStop(

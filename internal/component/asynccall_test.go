@@ -1,5 +1,3 @@
-//go:build goexperiment.synctest
-
 package component
 
 import (
@@ -145,7 +143,7 @@ func TestAsyncCall(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			synctest.Run(func() {
+			synctest.Test(t, func(t *testing.T) {
 				ctx, cancelCause := context.WithCancelCause(t.Context())
 				defer cancelCause(errors.New("test ended"))
 
@@ -168,6 +166,10 @@ func TestAsyncCall(t *testing.T) {
 				test.Eq(t, tt.want.d, gotD)
 				test.Eq(t, tt.want.val, got)
 				test.ErrorIs(t, err, tt.want.err)
+
+				// HACK(go1.25 upgrade): some of our test coroutines run longer than our main test, causing a panic.
+				// Sleep at end fixes this, for now. I should redo this later on to be smarter.
+				time.Sleep(5 * time.Minute)
 			})
 		})
 	}
