@@ -1,5 +1,3 @@
-export GOEXPERIMENT = synctest
-
 .PHONY: help
 help:
 	@echo "make test: Runs tests and updates coverage.html"
