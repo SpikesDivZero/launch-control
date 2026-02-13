@@ -46,6 +46,14 @@ func (c *Controller) Launch(name string, opts ...ComponentOption) {
 	c.impl.Launch(name, comp)
 }
 
+func (c *Controller) Launch126(name string, opts ...Options126) {
+	comp, err := buildComponent126(name, opts...)
+	if err != nil {
+		panic(fmt.Sprintf("component build failed: %v", err))
+	}
+	c.impl.Launch(name, comp)
+}
+
 // RequestStop signals to the controller that it's time to exit, with an optional error explaining why.
 //
 // It's safe to call as multiple times. Only the first non-nil error is recorded.
