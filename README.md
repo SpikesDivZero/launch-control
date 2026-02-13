@@ -40,11 +40,12 @@ We mitigate this by regarding timeouts as errors, triggering the shutdown proces
 ctrl := launch.NewController(context.TODO())
 
 mgmtServer := newHttpManagementServer() // Internal or mgmt facing service
-ctrl.Launch("http:mgmt", launch.WithRun(
-    mgmtServer.Serve,
-    mgmtServer.Shutdown))
+ctrl.Launch("http:mgmt", launch.Options{
+    Run:      mgmtServer.Serve,
+    Shutdown: mgmtServer.Shutdown,
+})
 
-// Since there's no WithCheckReady, this first launch will return as soon as Serve() is started.
+// Since there's no CheckReady, this first launch will return as soon as Serve() is started.
 //
 // Our http:mgmt service exposes a `GET /ready` to let our L7 traffic management know if this service is ready
 // to accept traffic.
@@ -52,30 +53,32 @@ ctrl.Launch("http:mgmt", launch.WithRun(
 // It starts in the not-ready state, and is controlled via `mgmtServer.SetReadyForTraffic(bool)`
 
 kafkaClient := newKafkaClient()
-ctrl.Launch("kafka",
-    launch.WithStartStop(
-        kafkaClient.ConnectProducer,
-        kafkaClient.FlushAndDisconnect),
-    launch.WithCheckReady(kafkaClient.CheckFullyConnected))
+ctrl.Launch("kafka", launch.Options{
+    Start:      kafkaClient.ConnectProducer,
+    Stop:       kafkaClient.FlushAndDisconnect,
+    CheckReady: kafkaClient.CheckFullyConnected,
+})
 
-// The WithCheckReady above means we won't proceed to launch the next services until the kafka client is fully
+// The CheckReady above means we won't proceed to launch the next services until the kafka client is fully
 // connected to all partitions on the topics it uses.
 
 pubServer := newHttpPublicServer() // Client-facing service
-ctrl.Launch("http:client", launch.WithRun(
-    pubServer.Serve,
-    pubServer.Shutdown))
+ctrl.Launch("http:client", launch.Options{
+    Run:      pubServer.Serve,
+    Shutdown: pubServer.Shutdown,
+})
 
-ctrl.Launch("mark-ready", launch.WithStartStop(
-    func(ctx context.Context) error { // Start
+ctrl.Launch("mark-ready", launch.Options{
+    Start: func(ctx context.Context) error {
         mgmtServer.SetReadyForTraffic(true)
         return nil
     },
-    func(ctx context.Context) error { // Stop
+    Stop: func(ctx context.Context) error {
         mgmtServer.SetReadyForTraffic(false)
         time.Sleep(15 * time.Second) // Allow for the L7 traffic routers to get the update
         return nil
-    }))
+    },
+})
 
 // We can request a shutdown at any time via request stop.
 time.AfterFunc(time.Minute, func() {
