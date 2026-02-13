@@ -30,16 +30,16 @@ func TestRunExitingWithErrorCausesShutdown(t *testing.T) {
 
 		err := errors.New("boop")
 
-		ctrl.Launch126("one", launch.Options126{
+		ctrl.Launch("one", launch.Options{
 			Start: func(ctx context.Context) error { return nil },
 			Stop:  func(ctx context.Context) error { return nil }})
-		ctrl.Launch126("two", launch.Options126{
+		ctrl.Launch("two", launch.Options{
 			Start: func(ctx context.Context) error {
 				time.Sleep(time.Second)
 				return err
 			},
 			Stop: func(ctx context.Context) error { return nil }})
-		ctrl.Launch126("three", launch.Options126{
+		ctrl.Launch("three", launch.Options{
 			Start: func(ctx context.Context) error { return nil },
 			Stop:  func(ctx context.Context) error { return nil }})
 
@@ -52,16 +52,16 @@ func TestRunExitingWithNoErrorCausesShutdown(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		ctrl := newController(t)
 
-		ctrl.Launch126("one", launch.Options126{
+		ctrl.Launch("one", launch.Options{
 			Start: func(ctx context.Context) error { return nil },
 			Stop:  func(ctx context.Context) error { return nil }})
-		ctrl.Launch126("two", launch.Options126{
+		ctrl.Launch("two", launch.Options{
 			Run: func(ctx context.Context) error {
 				time.Sleep(time.Second)
 				return nil
 			},
 			Shutdown: func(ctx context.Context) error { return nil }})
-		ctrl.Launch126("three", launch.Options126{
+		ctrl.Launch("three", launch.Options{
 			Start: func(ctx context.Context) error { return nil },
 			Stop:  func(ctx context.Context) error { return nil }})
 

@@ -14,7 +14,7 @@ import (
 func TestShutdownCallTimeout(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		ctrl := newController(t)
-		ctrl.Launch126("test", launch.Options126{
+		ctrl.Launch("test", launch.Options{
 			Run: func(ctx context.Context) error {
 				<-ctx.Done()
 				return nil
@@ -34,7 +34,7 @@ func TestShutdownCallTimeout(t *testing.T) {
 func TestShutdownCompletionTimeout(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		ctrl := newController(t)
-		ctrl.Launch126("test", launch.Options126{
+		ctrl.Launch("test", launch.Options{
 			Run: func(ctx context.Context) error {
 				<-ctx.Done()
 				return nil
@@ -58,7 +58,7 @@ func TestShutdownCompletionTimeout(t *testing.T) {
 func TestSSWStartCallTimeout(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		ctrl := newController(t)
-		ctrl.Launch126("test", launch.Options126{
+		ctrl.Launch("test", launch.Options{
 			Start: func(ctx context.Context) error {
 				time.Sleep(time.Minute)
 				return nil
@@ -80,7 +80,7 @@ func TestSSWStartCallTimeout(t *testing.T) {
 func TestSSWStopCallTimeout(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		ctrl := newController(t)
-		ctrl.Launch126("test", launch.Options126{
+		ctrl.Launch("test", launch.Options{
 			Start: func(ctx context.Context) error { return nil },
 			Stop: func(ctx context.Context) error {
 				time.Sleep(time.Minute)
@@ -103,9 +103,9 @@ func TestSSWStopCallTimeout(t *testing.T) {
 func TestReadyCallTimeout(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		ctrl := newController(t)
-		ctrl.Launch126("test",
+		ctrl.Launch("test",
 			withDummyStartStop(),
-			launch.Options126{
+			launch.Options{
 				CheckReady: func(ctx context.Context) (bool, error) {
 					time.Sleep(time.Minute)
 					return true, nil

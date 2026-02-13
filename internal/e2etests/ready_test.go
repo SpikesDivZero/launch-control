@@ -30,9 +30,9 @@ func TestReadyReturnsSuccess(t *testing.T) {
 			}
 		}
 
-		c.Launch126("test",
+		c.Launch("test",
 			withDummyStartStop(),
-			launch.Options126{CheckReady: checkReady})
+			launch.Options{CheckReady: checkReady})
 
 		time.AfterFunc(time.Second, func() { c.RequestStop(nil) })
 
@@ -54,8 +54,8 @@ func TestReadyReturnsError(t *testing.T) {
 			return true, testErr // error > status
 		}
 
-		c.Launch126("test", withDummyStartStop(),
-			launch.Options126{CheckReady: checkReady})
+		c.Launch("test", withDummyStartStop(),
+			launch.Options{CheckReady: checkReady})
 		test.ErrorIs(t, c.Wait(), lcerrors.ComponentError{Name: "test", Stage: "wait-ready", Err: testErr})
 	})
 }
@@ -72,8 +72,8 @@ func TestReadyMaxAttempts(t *testing.T) {
 			return false, nil
 		}
 
-		c.Launch126("test", withDummyStartStop(),
-			launch.Options126{
+		c.Launch("test", withDummyStartStop(),
+			launch.Options{
 				CheckReady:            checkReady,
 				CheckReadyMaxAttempts: new(3)})
 
@@ -114,9 +114,9 @@ func TestReadyBackoff(t *testing.T) {
 			return false, nil
 		}
 
-		c.Launch126("test",
+		c.Launch("test",
 			withDummyStartStop(),
-			launch.Options126{
+			launch.Options{
 				CheckReady:            checkReady,
 				CheckReadyBackoff:     backoff,
 				CheckReadyMaxAttempts: new(5),

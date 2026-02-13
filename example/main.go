@@ -36,7 +36,7 @@ func main() {
 
 	// You can combine any number of options here to create a default option set.
 	// Caveat: run styles and check-ready should not be here, as they can only be provided once per component.
-	defaultOpts := launch.Options126{}
+	defaultOpts := launch.Options{}
 
 	ctrl := launch.NewController(ctx)
 	ctrl.SetLogger(log)
@@ -44,9 +44,9 @@ func main() {
 	sigint := IntteruptListener{
 		Log: log.With("prefix", "IntteruptListener"),
 	}
-	ctrl.Launch126("sigint",
+	ctrl.Launch("sigint",
 		defaultOpts,
-		launch.Options126{
+		launch.Options{
 			Run:      sigint.Run,
 			Shutdown: sigint.Shutdown,
 		},
@@ -56,18 +56,18 @@ func main() {
 		log.With("prefix", "http:mgmt"),
 		func() { ctrl.RequestStop(errors.New("stop requested via http mgmt")) },
 	)
-	ctrl.Launch126("http-mgmt",
+	ctrl.Launch("http-mgmt",
 		defaultOpts,
-		launch.Options126{
+		launch.Options{
 			Run:      mgmt.Run,
 			Shutdown: mgmt.Shutdown,
 		},
 	)
 
 	data := DataConnector{Log: log.With("prefix", "datastore")}
-	ctrl.Launch126("data",
+	ctrl.Launch("data",
 		defaultOpts,
-		launch.Options126{
+		launch.Options{
 			Start:      data.Connect,
 			Stop:       data.Disconnect,
 			CheckReady: data.CheckReady,
@@ -75,18 +75,18 @@ func main() {
 	)
 
 	app := NewHttpAppServer(log.With("prefix", "http:app"))
-	ctrl.Launch126("http-app",
+	ctrl.Launch("http-app",
 		defaultOpts,
-		launch.Options126{
+		launch.Options{
 			Run:      app.Run,
 			Shutdown: app.Shutdown,
 		},
 	)
 
 	// This one's a bit of an odd one, but it exists to show how we
-	ctrl.Launch126("ready-state",
+	ctrl.Launch("ready-state",
 		defaultOpts,
-		launch.Options126{
+		launch.Options{
 			Start: func(ctx context.Context) error {
 				// Once we start up, we're ready to accept traffic
 				mgmt.setReadyState(true)

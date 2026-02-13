@@ -32,20 +32,12 @@ func NewController(ctx context.Context) Controller {
 // This blocks until the component launch has finished (regardless of success or failure).
 //
 // Required options: Nearly every option is, as the name suggests, optional. However you must provide exactly
-// one of [WithRun] or [WithStartStop] as one of the options, as this defines how the component should execute.
+// one of Run+Shutdown or Start+Stop as one of the options, as this defines how the component should execute.
 //
 // If a Launch request comes in after the controller has started shutting down, the request will be silently
 // discarded.
-func (c *Controller) Launch(name string, opts ...ComponentOption) {
+func (c *Controller) Launch(name string, opts ...Options) {
 	comp, err := buildComponent(name, opts...)
-	if err != nil {
-		panic(fmt.Sprintf("component build failed: %v", err))
-	}
-	c.impl.Launch(name, comp)
-}
-
-func (c *Controller) Launch126(name string, opts ...Options126) {
-	comp, err := buildComponent126(name, opts...)
 	if err != nil {
 		panic(fmt.Sprintf("component build failed: %v", err))
 	}
