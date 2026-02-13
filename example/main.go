@@ -36,50 +36,63 @@ func main() {
 
 	// You can combine any number of options here to create a default option set.
 	// Caveat: run styles and check-ready should not be here, as they can only be provided once per component.
-	defaultOpts := launch.WithBundledOptions()
+	defaultOpts := launch.Options126{}
 
-	ctrl := launch.NewController(ctx, launch.WithControllerLogger(log))
+	ctrl := launch.NewController(ctx)
+	ctrl.SetLogger(log)
 
 	sigint := IntteruptListener{
 		Log: log.With("prefix", "IntteruptListener"),
 	}
-	ctrl.Launch("sigint",
+	ctrl.Launch126("sigint",
 		defaultOpts,
-		launch.WithRun(sigint.Run, sigint.Shutdown),
+		launch.Options126{
+			Run:      sigint.Run,
+			Shutdown: sigint.Shutdown,
+		},
 	)
 
 	mgmt := NewHttpMgmtServer(
 		log.With("prefix", "http:mgmt"),
 		func() { ctrl.RequestStop(errors.New("stop requested via http mgmt")) },
 	)
-	ctrl.Launch("http-mgmt",
+	ctrl.Launch126("http-mgmt",
 		defaultOpts,
-		launch.WithRun(mgmt.Run, mgmt.Shutdown),
+		launch.Options126{
+			Run:      mgmt.Run,
+			Shutdown: mgmt.Shutdown,
+		},
 	)
 
 	data := DataConnector{Log: log.With("prefix", "datastore")}
-	ctrl.Launch("data",
+	ctrl.Launch126("data",
 		defaultOpts,
-		launch.WithStartStop(data.Connect, data.Disconnect),
-		launch.WithCheckReady(data.CheckReady),
+		launch.Options126{
+			Start:      data.Connect,
+			Stop:       data.Disconnect,
+			CheckReady: data.CheckReady,
+		},
 	)
 
 	app := NewHttpAppServer(log.With("prefix", "http:app"))
-	ctrl.Launch("http-app",
+	ctrl.Launch126("http-app",
 		defaultOpts,
-		launch.WithRun(app.Run, app.Shutdown),
+		launch.Options126{
+			Run:      app.Run,
+			Shutdown: app.Shutdown,
+		},
 	)
 
 	// This one's a bit of an odd one, but it exists to show how we
-	ctrl.Launch("ready-state",
+	ctrl.Launch126("ready-state",
 		defaultOpts,
-		launch.WithStartStop(
-			func(ctx context.Context) error {
+		launch.Options126{
+			Start: func(ctx context.Context) error {
 				// Once we start up, we're ready to accept traffic
 				mgmt.setReadyState(true)
 				return nil
 			},
-			func(ctx context.Context) error {
+			Stop: func(ctx context.Context) error {
 				// And as we're shutting down, we're no longer willing to accept traffic.
 				mgmt.setReadyState(false)
 
@@ -91,7 +104,7 @@ func main() {
 
 				return nil
 			},
-		),
+		},
 	)
 
 	log.Info("Started up; you can cancel it via ^C or curl http://localhost:8844/_/shutdown")
