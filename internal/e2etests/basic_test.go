@@ -31,17 +31,17 @@ func TestRunExitingWithErrorCausesShutdown(t *testing.T) {
 		err := errors.New("boop")
 
 		ctrl.Launch("one", launch.Options{
-			Start: func(ctx context.Context) error { return nil },
-			Stop:  func(ctx context.Context) error { return nil }})
+			Start:    func(ctx context.Context) error { return nil },
+			Shutdown: func(ctx context.Context) error { return nil }})
 		ctrl.Launch("two", launch.Options{
 			Start: func(ctx context.Context) error {
 				time.Sleep(time.Second)
 				return err
 			},
-			Stop: func(ctx context.Context) error { return nil }})
+			Shutdown: func(ctx context.Context) error { return nil }})
 		ctrl.Launch("three", launch.Options{
-			Start: func(ctx context.Context) error { return nil },
-			Stop:  func(ctx context.Context) error { return nil }})
+			Start:    func(ctx context.Context) error { return nil },
+			Shutdown: func(ctx context.Context) error { return nil }})
 
 		test.ErrorIs(t, ctrl.Wait(), err)
 	})
@@ -53,8 +53,8 @@ func TestRunExitingWithNoErrorCausesShutdown(t *testing.T) {
 		ctrl := newController(t)
 
 		ctrl.Launch("one", launch.Options{
-			Start: func(ctx context.Context) error { return nil },
-			Stop:  func(ctx context.Context) error { return nil }})
+			Start:    func(ctx context.Context) error { return nil },
+			Shutdown: func(ctx context.Context) error { return nil }})
 		ctrl.Launch("two", launch.Options{
 			Run: func(ctx context.Context) error {
 				time.Sleep(time.Second)
@@ -62,8 +62,8 @@ func TestRunExitingWithNoErrorCausesShutdown(t *testing.T) {
 			},
 			Shutdown: func(ctx context.Context) error { return nil }})
 		ctrl.Launch("three", launch.Options{
-			Start: func(ctx context.Context) error { return nil },
-			Stop:  func(ctx context.Context) error { return nil }})
+			Start:    func(ctx context.Context) error { return nil },
+			Shutdown: func(ctx context.Context) error { return nil }})
 
 		test.ErrorIs(t, ctrl.Wait(), nil)
 	})

@@ -63,9 +63,9 @@ func TestSSWStartCallTimeout(t *testing.T) {
 				time.Sleep(time.Minute)
 				return nil
 			},
-			Stop:             func(ctx context.Context) error { return nil },
-			StartCallTimeout: new(time.Second),
-			StopCallTimeout:  new(time.Second),
+			Shutdown:            func(ctx context.Context) error { return nil },
+			StartCallTimeout:    new(time.Second),
+			ShutdownCallTimeout: new(time.Second),
 		})
 
 		// The start timeout error should result in the system automatically shutting down
@@ -82,12 +82,12 @@ func TestSSWStopCallTimeout(t *testing.T) {
 		ctrl := newController(t)
 		ctrl.Launch("test", launch.Options{
 			Start: func(ctx context.Context) error { return nil },
-			Stop: func(ctx context.Context) error {
+			Shutdown: func(ctx context.Context) error {
 				time.Sleep(time.Minute)
 				return nil
 			},
-			StartCallTimeout: new(2 * time.Second),
-			StopCallTimeout:  new(2 * time.Second),
+			StartCallTimeout:    new(2 * time.Second),
+			ShutdownCallTimeout: new(2 * time.Second),
 		})
 
 		time.AfterFunc(time.Second, func() { ctrl.RequestStop(nil) })

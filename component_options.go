@@ -10,67 +10,77 @@ import (
 	"github.com/spikesdivzero/launch-control/internal/component"
 )
 
-// If you don't want something to have a timeout, you can use this as a convenience.
-//
 // Truthfully, the constant value is a bit less than 50 years, which isn't the same as saying
 // no timeout, but... what're the odds you're going to leave something running for that long?
 //
 // Why 50 years? No reason, except that it's unreasonably large, and will fit within Go's
-// time.Time type for a long time to come. (time.maxWall is the year 2157, 132 years from now)
+// time.Time type for a long time to come. (time.maxWall is the year 2157, 132 years from when
+// this was first defined)
 const NoTimeout time.Duration = 50 * (time.Hour * 24 * 365)
 
-// FIXME: Document this. For now, I've just moved the old WithXXX documentation up here while migrating things around.
+// Options define how a Component is executed, along with any timeouts that should be applied to it.
+//
+// At least one Options struct passed to Launch must provide a way to run the component.
+// This options struct must contain a `Shutdown` function, along with either `Run` or `Start`.
+//
+// Everything else is optional.
 type Options struct {
-	// Defines the main `Run` and `Shutdown` functions that control the component's lifecycle.
-	//
-	// `Run` is a blocking function, that returns when the component's has exited (or has started exiting via `Shutdown`).
+	// `Run` is a blocking function, that returns when the component has exited (or has started exiting via `Shutdown`).
 	//
 	// If `Run` returns an error, then the error will be passed up to the controller and the controller will transition
 	// into a failed/shutting down state.
 	//
+	// Constraints:
+	//
+	//   - `Run` may only be provided once.
+	//   - `Shutdown` must be provided in the same `Options` for completeness.
+	//   - `Start` is not compatible with `Run` (they represent different run styles)
+	Run func(context.Context) error
+
+	// `Start` is a non-blocking function, that returns once the component has started up.
+	//
+	// If `Start` returns an error, then the error will be passed up to the controller and the controller will
+	// transition into a failed/shutting down state.
+	//
+	// Constraints:
+	//
+	//   - `Start` may only be provided once.
+	//   - `Shutdown` must be provided in the same `Options` for completeness.
+	//   - `Run` is not compatible with `Start` (they represent different run styles)
+	Start func(context.Context) error
+
+	// Applies a call-duration timeout to the `Start` functions.
+	//
+	// Defaults to [NoTimeout].
+	// Both zero and negative duration arguments are replaced with [NoTimeout].
+	StartCallTimeout *time.Duration
+
 	// `Shutdown` is called when it's time to terminate the component. The shutdown process is not considered complete
 	// until both `Run` and `Shutdown` have finished, or their corresponding timeouts have completed.
 	//
-	// If you've also provided [WithCheckReady], it's worth noting that `Shutdown` may be called at any point. The
+	// If you've also provided `CheckReady`, it's worth noting that `Shutdown` may be called at any point. The
 	// `CheckReady` function may or may not have been called. If the `CheckReady` call timed out, then it may still be
 	// running in another coroutine.
 	//
-	// Constraints: [WithRun] may only be provided once, and is mutually exclusive with [WithStartStop].
-	Run      func(context.Context) error
+	// Constraints:
+	//
+	//   - `Shutdown` may only be provided once.
+	//   - `Shutdown` must be provided in the same `Options` as either `Run` or `Start` (but not both)
 	Shutdown func(context.Context) error
 
-	// Applies a call-duration timeout to the `Shutdown` function provided to [WithRun].
+	// Applies a call-duration timeout to the `Shutdown` function.
 	//
-	// In the event that both this and [WithShutdownCompletionTimeout] are provided, the call timeout
-	// will be the lesser of the two durations.
+	// In the event that both this and `ShutdownCompletionTimeout` are provided, the call timeout will be the lesser
+	// of the two durations.
 	//
 	// If not provided, it defaults to [NoTimeout].
 	ShutdownCallTimeout *time.Duration
 
-	// Applies a timeout to the overall shutdown process. It is expected that within this time, both `Run` and `Shutdown`
-	// should return successfully.
+	// Applies a timeout to the overall shutdown process. It is expected that within this time, both `Run` and
+	// `Shutdown` should return successfully.
 	//
 	// If not provided, it defaults to [NoTimeout].
 	ShutdownCompletionTimeout *time.Duration
-
-	// Wraps the provided `Start` and `Stop` functions, making them compatible with the controllers Run-Shutdown model.
-	//
-	// Both `Start` and `Stop` are expected to return once their respective step is completed.
-	//
-	// If `Start` returns an error, then the error will be passed up to the controller and the controller will transition
-	// into a failed/shutting down state.
-	//
-	// Constraints: [WithStartStop] may only be provided once, and is mutually exclusive with [WithRun].
-	Start func(context.Context) error
-	Stop  func(context.Context) error
-
-	// Applies a call-duration timeout to the `Start` and `Stop` functions provided to [WithStartStop].
-	//
-	// These values default to [NoTimeout].
-	//
-	// Both zero and negative duration arguments are replaced with [NoTimeout].
-	StartCallTimeout *time.Duration
-	StopCallTimeout  *time.Duration
 
 	// Defines a function that can check to see if the component is fully started.
 	//
@@ -78,13 +88,13 @@ type Options struct {
 	//
 	//   - If an error is returned, then the error is passed up to the controller, and the startup is aborted.
 	//   - If true is returned, then the component is both started and ready, and we can continue.
-	//   - Otherwise (false and no error), we retry as permitted by [WithCheckReadyMaxAttempts] and an delay from
-	//     [WithCheckReadyBackoff].
+	//   - Otherwise (false and no error), we retry as permitted by `CheckReadyMaxAttempts` and an delay from
+	//     `CheckReadyBackoff`.
 	//
 	// Constraint: This option may only be provided once.
 	CheckReady func(context.Context) (bool, error)
 
-	// Applies a call-duration timeout to the `CheckReady` function provided to [WithCheckReady].
+	// Applies a call-duration timeout to the `CheckReady` function provided to `CheckReady`.
 	//
 	// If not provided, it defaults to [NoTimeout].
 	CheckReadyCallTimeout *time.Duration
@@ -104,27 +114,37 @@ type Options struct {
 // If the function set in this Options is invalid, it panics.
 // If there's no run configuration in this options, returns empty string.
 func (co Options) getRunStyle() string {
-	hasRun, hasShutdown := co.Run != nil, co.Shutdown != nil
-	if hasRun != hasShutdown {
-		panic("Options has Run or Shutdown, but not both (incomplete configuration)")
-	}
+	hasRun := co.Run != nil
+	hasStart := co.Start != nil
+	hasShutdown := co.Shutdown != nil
 
-	hasStart, hasStop := co.Start != nil, co.Stop != nil
-	if hasStart != hasStop {
-		panic("Options has Start or Stop, but not both (incomplete configuration)")
+	if !hasRun && !hasStart && !hasShutdown {
+		return ""
 	}
 
 	if hasRun && hasStart {
 		panic("Options has both Run and Start; can only have one run style, not both (invalid configuration)")
 	}
 
+	if hasShutdown != (hasRun || hasStart) {
+		if hasRun {
+			panic("Options has Run, but doesn't have Shutdown (incomplete configuration)")
+		} else if hasStart {
+			panic("Options has Start, but doesn't have Shutdown (incomplete configuration)")
+		} else if hasShutdown {
+			panic("Options has Shutdown, but doesn't have one of Run or Start (incomplete configuration)")
+		} else {
+			panic("internal error: shouldn't be possible")
+		}
+	}
+
 	if hasRun {
-		return "Run+Shutdown"
+		return "Run"
+	} else if hasStart {
+		return "Start"
+	} else {
+		panic("internal error: shouldn't be possible")
 	}
-	if hasStart {
-		return "Start+Stop"
-	}
-	return ""
 }
 
 func (co *Options) applyOptions(from Options) {
@@ -145,21 +165,16 @@ func (co *Options) applyOptions(from Options) {
 		}
 	}
 
-	if from.Run != nil {
+	if from.Shutdown != nil {
 		co.Run = from.Run
+		co.Start = from.Start
 		co.Shutdown = from.Shutdown
 	}
 
 	applyDuration(&co.ShutdownCallTimeout, from.ShutdownCallTimeout)
 	applyDuration(&co.ShutdownCompletionTimeout, from.ShutdownCompletionTimeout)
 
-	if from.Start != nil {
-		co.Start = from.Start
-		co.Stop = from.Stop
-	}
-
 	applyDuration(&co.StartCallTimeout, from.StartCallTimeout)
-	applyDuration(&co.StopCallTimeout, from.StopCallTimeout)
 
 	if from.CheckReady != nil {
 		if co.CheckReady != nil {
@@ -187,14 +202,13 @@ func (co *Options) finalize() error {
 	}
 
 	if co.getRunStyle() == "" {
-		return errors.New("must provide either Run+Shutdown or Start+Stop")
+		return errors.New("must provide (Run or Start) and Shutdown")
 	}
 
 	applyDefaultDuration(&co.ShutdownCallTimeout, NoTimeout)
 	applyDefaultDuration(&co.ShutdownCompletionTimeout, NoTimeout)
 
 	applyDefaultDuration(&co.StartCallTimeout, NoTimeout)
-	applyDefaultDuration(&co.StopCallTimeout, NoTimeout)
 
 	// CheckReady can be missing.
 
@@ -232,10 +246,10 @@ func buildComponent(name string, opts ...Options) (*component.Component, error) 
 		ssw := component.NewStartStopWrapperFor(c)
 
 		ssw.ImplStart = co.Start
-		ssw.ImplStop = co.Stop
+		ssw.ImplStop = co.Shutdown
 
 		ssw.StartTimeout = *co.StartCallTimeout
-		ssw.StopTimeout = *co.StopCallTimeout
+		ssw.StopTimeout = *co.ShutdownCallTimeout
 
 		co.Run = ssw.Run
 		co.Shutdown = ssw.Shutdown

@@ -16,7 +16,7 @@ func newController(t *testing.T) launch.Controller {
 
 func withDummyStartStop() launch.Options {
 	return launch.Options{
-		Start: func(ctx context.Context) error { return nil },
-		Stop:  func(ctx context.Context) error { return nil },
+		Start:    func(ctx context.Context) error { return nil },
+		Shutdown: func(ctx context.Context) error { return nil },
 	}
 }

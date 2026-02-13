@@ -69,7 +69,7 @@ func main() {
 		defaultOpts,
 		launch.Options{
 			Start:      data.Connect,
-			Stop:       data.Disconnect,
+			Shutdown:   data.Disconnect,
 			CheckReady: data.CheckReady,
 		},
 	)
@@ -92,7 +92,7 @@ func main() {
 				mgmt.setReadyState(true)
 				return nil
 			},
-			Stop: func(ctx context.Context) error {
+			Shutdown: func(ctx context.Context) error {
 				// And as we're shutting down, we're no longer willing to accept traffic.
 				mgmt.setReadyState(false)
 
