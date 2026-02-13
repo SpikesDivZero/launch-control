@@ -30,18 +30,18 @@ func TestRunExitingWithErrorCausesShutdown(t *testing.T) {
 
 		err := errors.New("boop")
 
-		ctrl.Launch("one", launch.WithStartStop(
-			func(ctx context.Context) error { return nil },
-			func(ctx context.Context) error { return nil }))
-		ctrl.Launch("two", launch.WithRun(
-			func(ctx context.Context) error {
+		ctrl.Launch126("one", launch.Options126{
+			Start: func(ctx context.Context) error { return nil },
+			Stop:  func(ctx context.Context) error { return nil }})
+		ctrl.Launch126("two", launch.Options126{
+			Start: func(ctx context.Context) error {
 				time.Sleep(time.Second)
 				return err
 			},
-			func(ctx context.Context) error { return nil }))
-		ctrl.Launch("three", launch.WithStartStop(
-			func(ctx context.Context) error { return nil },
-			func(ctx context.Context) error { return nil }))
+			Stop: func(ctx context.Context) error { return nil }})
+		ctrl.Launch126("three", launch.Options126{
+			Start: func(ctx context.Context) error { return nil },
+			Stop:  func(ctx context.Context) error { return nil }})
 
 		test.ErrorIs(t, ctrl.Wait(), err)
 	})
@@ -52,18 +52,18 @@ func TestRunExitingWithNoErrorCausesShutdown(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		ctrl := newController(t)
 
-		ctrl.Launch("one", launch.WithStartStop(
-			func(ctx context.Context) error { return nil },
-			func(ctx context.Context) error { return nil }))
-		ctrl.Launch("two", launch.WithRun(
-			func(ctx context.Context) error {
+		ctrl.Launch126("one", launch.Options126{
+			Start: func(ctx context.Context) error { return nil },
+			Stop:  func(ctx context.Context) error { return nil }})
+		ctrl.Launch126("two", launch.Options126{
+			Run: func(ctx context.Context) error {
 				time.Sleep(time.Second)
 				return nil
 			},
-			func(ctx context.Context) error { return nil }))
-		ctrl.Launch("three", launch.WithStartStop(
-			func(ctx context.Context) error { return nil },
-			func(ctx context.Context) error { return nil }))
+			Shutdown: func(ctx context.Context) error { return nil }})
+		ctrl.Launch126("three", launch.Options126{
+			Start: func(ctx context.Context) error { return nil },
+			Stop:  func(ctx context.Context) error { return nil }})
 
 		test.ErrorIs(t, ctrl.Wait(), nil)
 	})

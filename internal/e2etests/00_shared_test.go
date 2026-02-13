@@ -14,8 +14,9 @@ func newController(t *testing.T) launch.Controller {
 	return launch.NewController(t.Context())
 }
 
-func withDummyStartStop() launch.ComponentOption {
-	return launch.WithStartStop(
-		func(context.Context) error { return nil },
-		func(context.Context) error { return nil })
+func withDummyStartStop() launch.Options126 {
+	return launch.Options126{
+		Start: func(ctx context.Context) error { return nil },
+		Stop:  func(ctx context.Context) error { return nil },
+	}
 }

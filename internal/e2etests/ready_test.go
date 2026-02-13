@@ -30,8 +30,9 @@ func TestReadyReturnsSuccess(t *testing.T) {
 			}
 		}
 
-		c.Launch("test", withDummyStartStop(),
-			launch.WithCheckReady(checkReady))
+		c.Launch126("test",
+			withDummyStartStop(),
+			launch.Options126{CheckReady: checkReady})
 
 		time.AfterFunc(time.Second, func() { c.RequestStop(nil) })
 
@@ -53,8 +54,8 @@ func TestReadyReturnsError(t *testing.T) {
 			return true, testErr // error > status
 		}
 
-		c.Launch("test", withDummyStartStop(),
-			launch.WithCheckReady(checkReady))
+		c.Launch126("test", withDummyStartStop(),
+			launch.Options126{CheckReady: checkReady})
 		test.ErrorIs(t, c.Wait(), lcerrors.ComponentError{Name: "test", Stage: "wait-ready", Err: testErr})
 	})
 }
@@ -71,9 +72,10 @@ func TestReadyMaxAttempts(t *testing.T) {
 			return false, nil
 		}
 
-		c.Launch("test", withDummyStartStop(),
-			launch.WithCheckReady(checkReady),
-			launch.WithCheckReadyMaxAttempts(3))
+		c.Launch126("test", withDummyStartStop(),
+			launch.Options126{
+				CheckReady:            checkReady,
+				CheckReadyMaxAttempts: new(3)})
 
 		test.ErrorIs(t, c.Wait(), lcerrors.ComponentError{
 			Name:  "test",
@@ -112,10 +114,13 @@ func TestReadyBackoff(t *testing.T) {
 			return false, nil
 		}
 
-		c.Launch("test", withDummyStartStop(),
-			launch.WithCheckReady(checkReady),
-			launch.WithCheckReadyBackoff(backoff),
-			launch.WithCheckReadyMaxAttempts(5))
+		c.Launch126("test",
+			withDummyStartStop(),
+			launch.Options126{
+				CheckReady:            checkReady,
+				CheckReadyBackoff:     backoff,
+				CheckReadyMaxAttempts: new(5),
+			})
 
 		test.ErrorIs(t, c.Wait(), lcerrors.ComponentError{
 			Name:  "test",

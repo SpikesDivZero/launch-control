@@ -14,17 +14,17 @@ import (
 func TestShutdownCallTimeout(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		ctrl := newController(t)
-		ctrl.Launch("test",
-			launch.WithRun(
-				func(ctx context.Context) error {
-					<-ctx.Done()
-					return nil
-				},
-				func(ctx context.Context) error {
-					time.Sleep(time.Minute)
-					return nil
-				}),
-			launch.WithShutdownCallTimeout(5*time.Second))
+		ctrl.Launch126("test", launch.Options126{
+			Run: func(ctx context.Context) error {
+				<-ctx.Done()
+				return nil
+			},
+			Shutdown: func(ctx context.Context) error {
+				time.Sleep(time.Minute)
+				return nil
+			},
+			ShutdownCallTimeout: new(5 * time.Second),
+		})
 
 		time.AfterFunc(time.Second, func() { ctrl.RequestStop(nil) })
 		test.ErrorIs(t, ctrl.Wait(), lcerrors.ContextTimeoutError{Source: "Shutdown.CallTimeout"})
@@ -34,17 +34,17 @@ func TestShutdownCallTimeout(t *testing.T) {
 func TestShutdownCompletionTimeout(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		ctrl := newController(t)
-		ctrl.Launch("test",
-			launch.WithRun(
-				func(ctx context.Context) error {
-					<-ctx.Done()
-					return nil
-				},
-				func(ctx context.Context) error {
-					time.Sleep(time.Minute)
-					return nil
-				}),
-			launch.WithShutdownCompletionTimeout(5*time.Second))
+		ctrl.Launch126("test", launch.Options126{
+			Run: func(ctx context.Context) error {
+				<-ctx.Done()
+				return nil
+			},
+			Shutdown: func(ctx context.Context) error {
+				time.Sleep(time.Minute)
+				return nil
+			},
+			ShutdownCompletionTimeout: new(5 * time.Second),
+		})
 
 		time.AfterFunc(time.Second, func() { ctrl.RequestStop(nil) })
 		test.ErrorIs(t, ctrl.Wait(), lcerrors.ContextTimeoutError{Source: "Shutdown.CompletionTimeout"})
@@ -58,14 +58,15 @@ func TestShutdownCompletionTimeout(t *testing.T) {
 func TestSSWStartCallTimeout(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		ctrl := newController(t)
-		ctrl.Launch("test",
-			launch.WithStartStop(
-				func(ctx context.Context) error {
-					time.Sleep(time.Minute)
-					return nil
-				},
-				func(ctx context.Context) error { return nil }),
-			launch.WithStartStopCallTimeouts(time.Second, time.Second))
+		ctrl.Launch126("test", launch.Options126{
+			Start: func(ctx context.Context) error {
+				time.Sleep(time.Minute)
+				return nil
+			},
+			Stop:             func(ctx context.Context) error { return nil },
+			StartCallTimeout: new(time.Second),
+			StopCallTimeout:  new(time.Second),
+		})
 
 		// The start timeout error should result in the system automatically shutting down
 		test.ErrorIs(t, ctrl.Wait(), lcerrors.ContextTimeoutError{Source: "StartStopWrapper.StartTimeout"})
@@ -79,14 +80,15 @@ func TestSSWStartCallTimeout(t *testing.T) {
 func TestSSWStopCallTimeout(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		ctrl := newController(t)
-		ctrl.Launch("test",
-			launch.WithStartStop(
-				func(ctx context.Context) error { return nil },
-				func(ctx context.Context) error {
-					time.Sleep(time.Minute)
-					return nil
-				}),
-			launch.WithStartStopCallTimeouts(2*time.Second, 2*time.Second))
+		ctrl.Launch126("test", launch.Options126{
+			Start: func(ctx context.Context) error { return nil },
+			Stop: func(ctx context.Context) error {
+				time.Sleep(time.Minute)
+				return nil
+			},
+			StartCallTimeout: new(2 * time.Second),
+			StopCallTimeout:  new(2 * time.Second),
+		})
 
 		time.AfterFunc(time.Second, func() { ctrl.RequestStop(nil) })
 
@@ -101,12 +103,15 @@ func TestSSWStopCallTimeout(t *testing.T) {
 func TestReadyCallTimeout(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		ctrl := newController(t)
-		ctrl.Launch("test", withDummyStartStop(),
-			launch.WithCheckReady(func(ctx context.Context) (bool, error) {
-				time.Sleep(time.Minute)
-				return true, nil
-			}),
-			launch.WithCheckReadyCallTimeout(2*time.Second))
+		ctrl.Launch126("test",
+			withDummyStartStop(),
+			launch.Options126{
+				CheckReady: func(ctx context.Context) (bool, error) {
+					time.Sleep(time.Minute)
+					return true, nil
+				},
+				CheckReadyCallTimeout: new(2 * time.Second),
+			})
 
 		test.ErrorIs(t, ctrl.Wait(), lcerrors.ContextTimeoutError{Source: "CheckReady.CallTimeout"})
 
