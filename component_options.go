@@ -10,6 +10,15 @@ import (
 	"github.com/spikesdivzero/launch-control/internal/component"
 )
 
+// If you don't want something to have a timeout, you can use this as a convenience.
+//
+// Truthfully, the constant value is a bit less than 50 years, which isn't the same as saying
+// no timeout, but... what're the odds you're going to leave something running for that long?
+//
+// Why 50 years? No reason, except that it's unreasonably large, and will fit within Go's
+// time.Time type for a long time to come. (time.maxWall is the year 2157, 132 years from now)
+const NoTimeout time.Duration = 50 * (time.Hour * 24 * 365)
+
 // FIXME: Document this. For now, I've just moved the old WithXXX documentation up here while migrating things around.
 type Options struct {
 	// Defines the main `Run` and `Shutdown` functions that control the component's lifecycle.
@@ -245,12 +254,3 @@ func buildComponent(name string, opts ...Options) (*component.Component, error) 
 
 	return c, nil
 }
-
-// If you don't want something to have a timeout, you can use this as a convenience.
-//
-// Truthfully, the constant value is a bit less than 50 years, which isn't the same as saying
-// no timeout, but... what're the odds you're going to leave something running for that long?
-//
-// Why 50 years? No reason, except that it's unreasonably large, and will fit within Go's
-// time.Time type for a long time to come. (time.maxWall is the year 2157, 132 years from now)
-const NoTimeout time.Duration = 50 * (time.Hour * 24 * 365)
