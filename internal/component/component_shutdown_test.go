@@ -178,6 +178,11 @@ func TestComponent_shutdownViaImpl(t *testing.T) {
 				c.shutdownViaImpl(ctx)
 				test.Eq(t, tt.wantD, time.Since(t0))
 
+				// As best I can tell, this Wait() shouldn't be necessary, but without it,
+				// we get a race detector error in the "times out" test case.
+				// Particularly, it's on shutdownCalled: ImplShutdown write vs test.Eq read.
+				synctest.Wait()
+
 				wantShutdownCalled := tt.name != "already dead" // So sue me...
 				test.Eq(t, wantShutdownCalled, shutdownCalled)
 
