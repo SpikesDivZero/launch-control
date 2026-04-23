@@ -123,37 +123,65 @@ func TestOptions_applyFunctionOptions(t *testing.T) {
 }
 
 func TestOptions_buildComponent(t *testing.T) {
-	opts := Options{
-		Run:        func(ctx context.Context) error { return errors.New("e1") },
-		Start:      func(ctx context.Context) error { return errors.New("e2") },
-		CheckReady: func(ctx context.Context) (bool, error) { return false, errors.New("e3") },
-		Stop:       func(ctx context.Context) error { return errors.New("e4") },
-	}
-	comp := opts.buildComponent("comp1")
+	t.Run("ssw", func(t *testing.T) {
+		opts := Options{
+			Start: func(ctx context.Context) error { return errors.New("e2") },
+			Stop:  func(ctx context.Context) error { return errors.New("e4") },
+		}
+		comp := opts.buildComponent("comp-ssw")
 
-	// Func ptrs are not comparable, so we check them first.
-	must.NotNil(t, comp.ImplRun)
-	test.EqError(t, comp.ImplRun(nil), "e1")
+		// We won't test the full comp internals here -- for that, see the "main" subtest (below)
+		test.Eq(t, "comp-ssw", comp.Name)
 
-	must.NotNil(t, comp.ImplStart)
-	test.EqError(t, comp.ImplStart(nil), "e2")
+		// Enable our test mocking in the SSW
+		must.NotNil(t, comp.SSW)
+		comp.SSW.TestControl.MockRun = func(ctx context.Context) error { return errors.New("m1") }
+		comp.SSW.TestControl.MockStop = func(ctx context.Context) error { return errors.New("m2") }
 
-	must.NotNil(t, comp.ImplRun)
-	b, e := comp.ImplCheckReady(nil)
-	test.False(t, b)
-	test.EqError(t, e, "e3")
+		// Check that SSW got the correct implementation functions
+		must.NotNil(t, comp.SSW.ImplStart)
+		test.EqError(t, comp.SSW.ImplStart(nil), "e2")
 
-	must.NotNil(t, comp.ImplStop)
-	test.EqError(t, comp.ImplStop(nil), "e4")
+		must.NotNil(t, comp.SSW.ImplStop)
+		test.EqError(t, comp.SSW.ImplStop(nil), "e4")
 
-	// Clear the pointers, since they're no longer needed
-	comp.ImplRun = nil
-	comp.ImplStart = nil
-	comp.ImplCheckReady = nil
-	comp.ImplStop = nil
+		// Check that the SSW Run/Stop replaced the opts values
+		must.NotNil(t, comp.ImplRun)
+		test.EqError(t, comp.ImplRun(nil), "m1")
 
-	// After, we'll check all the other public fields
-	test.Eq(t, &component.Component{
-		Name: "comp1",
-	}, comp)
+		must.NotNil(t, comp.ImplStop)
+		test.EqError(t, comp.ImplStop(nil), "m2")
+	})
+
+	t.Run("main", func(t *testing.T) {
+		opts := Options{
+			Run:        func(ctx context.Context) error { return errors.New("e1") },
+			CheckReady: func(ctx context.Context) (bool, error) { return false, errors.New("e3") },
+			Stop:       func(ctx context.Context) error { return errors.New("e4") },
+		}
+		comp := opts.buildComponent("comp1")
+
+		// Func ptrs are not comparable, so we check them first.
+		must.NotNil(t, comp.ImplRun)
+		test.EqError(t, comp.ImplRun(nil), "e1")
+
+		must.NotNil(t, comp.ImplRun)
+		b, e := comp.ImplCheckReady(nil)
+		test.False(t, b)
+		test.EqError(t, e, "e3")
+
+		must.NotNil(t, comp.ImplStop)
+		test.EqError(t, comp.ImplStop(nil), "e4")
+
+		// Clear the pointers, since they're no longer needed
+		comp.ImplRun = nil
+		comp.ImplCheckReady = nil
+		comp.ImplStop = nil
+
+		// After, we'll check all the other public fields
+		test.Eq(t, &component.Component{
+			Name: "comp1",
+			SSW:  nil,
+		}, comp)
+	})
 }
