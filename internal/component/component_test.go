@@ -1,0 +1,144 @@
+package component
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"testing"
+	"testing/synctest"
+
+	"github.com/shoenig/test"
+	"github.com/shoenig/test/must"
+)
+
+func TestComponent_Register(t *testing.T) {
+	// We trust that most of it is valid, since the types are different so errors are unlikely.
+	// We'll check the basics, as well as the context chain making sense.
+
+	ctxKey := &struct{ _ int }{42}
+	ctx := context.WithValue(t.Context(), ctxKey, any(64))
+	log := slog.New(slog.DiscardHandler)
+
+	c := &Component{Name: "test"}
+
+	notifyCalled := false
+	c.Register(ctx, log, ControllerCallbacks{
+		ComponentExited: func(c *Component, err error) { notifyCalled = true },
+	})
+
+	test.EqOp(t, log, c.log)
+
+	must.NotNil(t, c.callbacks.ComponentExited)
+	c.callbacks.ComponentExited(nil, nil)
+	test.True(t, notifyCalled)
+
+	// check the ctx chain
+	must.NotNil(t, c.ctx)
+	must.NotNil(t, c.runCtx)
+
+	// They should all be different
+	test.NotEq(t, ctx, c.ctx)
+	test.NotEq(t, ctx, c.runCtx)
+	test.NotEq(t, c.ctx, c.runCtx)
+
+	// And they should all be in the chain
+	test.Eq(t, any(64), ctx.Value(ctxKey))
+	test.Eq(t, any(64), c.ctx.Value(ctxKey))
+	test.Eq(t, any(64), c.runCtx.Value(ctxKey))
+
+	// The runCtx must be a child of the main ctx. We'll check this via cancel propegation
+	cancelErr := errors.New("e1")
+	c.ctxCancel(cancelErr)
+
+	test.Nil(t, ctx.Err())
+	test.EqOp(t, cancelErr, context.Cause(c.ctx))
+	test.EqOp(t, cancelErr, context.Cause(c.runCtx))
+}
+
+func TestComponent_Start(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		c := &Component{
+			Name: "test",
+		}
+
+		startedCh := make(chan struct{})
+		c.ImplRun = func(ctx context.Context) error {
+			close(startedCh)
+			<-c.runCtx.Done()
+			return nil
+		}
+
+		notifiedCh := make(chan struct{})
+		c.Register(t.Context(), slog.New(slog.DiscardHandler), ControllerCallbacks{
+			ComponentExited: func(c *Component, err error) {
+				close(notifiedCh)
+			},
+		})
+
+		c.Start()
+		synctest.Wait()
+
+		select {
+		case <-startedCh:
+		default:
+			t.Error("ImplRun did not start?")
+		}
+
+		c.runCtxCancel(nil)
+		synctest.Wait()
+
+		select {
+		case <-notifiedCh:
+		default:
+			t.Error("monitorExit did not notify exit. did it start?")
+		}
+	})
+}
+
+func TestComponent_monitorExit(t *testing.T) {
+	c := &Component{Name: "test"}
+
+	var wantErr error
+	var calledNotify, wantCalledNotify int
+	c.callbacks.ComponentExited = func(gotC *Component, gotErr error) {
+		calledNotify++
+		test.EqOp(t, c, gotC)
+		test.EqOp(t, wantErr, gotErr) // we don't want it wrapped
+	}
+	defer func() {
+		test.Eq(t, calledNotify, wantCalledNotify)
+	}()
+
+	t.Run("no error", func(t *testing.T) {
+		wantCalledNotify++
+		wantErr = nil
+
+		ch := make(chan error, 1)
+		ch <- nil
+		close(ch)
+
+		c.monitorExit(ch)
+	})
+
+	t.Run("error", func(t *testing.T) {
+		wantCalledNotify++
+		wantErr = errors.New("e1")
+
+		ch := make(chan error, 1)
+		ch <- wantErr
+		close(ch)
+
+		c.monitorExit(ch)
+	})
+
+	t.Run("premature close", func(t *testing.T) {
+		wantCalledNotify++
+		wantErr = PrematureChannelCloseError{"resultCh"}
+
+		ch := make(chan error, 1)
+		// We don't write any message, as if the user code called runtime.Goexit
+		close(ch)
+
+		c.monitorExit(ch)
+	})
+}
