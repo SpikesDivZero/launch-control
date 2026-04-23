@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	"github.com/spikesdivzero/launch-control/internal"
 )
 
 // Options defines how you'd like this package to run your component.
@@ -134,4 +136,14 @@ func (o *Options) validate() error {
 	// Here, we should validate all other remaining values, and assign them defaults as necessary.
 
 	return errors.New("NYI: Options.validate")
+}
+
+func (o *Options) buildComponent(name string) *internal.Component {
+	return &internal.Component{
+		Name:           name,
+		ImplRun:        o.Run,
+		ImplStart:      o.Start,
+		ImplCheckReady: o.CheckReady,
+		ImplStop:       o.Stop,
+	}
 }

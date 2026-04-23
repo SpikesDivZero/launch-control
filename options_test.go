@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/shoenig/test"
+	"github.com/shoenig/test/must"
+	"github.com/spikesdivzero/launch-control/internal"
 )
 
 func Test_mergeOptions(t *testing.T) {
@@ -18,7 +20,7 @@ func Test_mergeOptions(t *testing.T) {
 	t.Run("apply returns error", func(t *testing.T) {
 		def := newDefaultOptions()
 		_, err := mergeOptions([]Options{def, def, def})
-		test.ErrorContains(t, err, "options[2]: the final Options must contain a Stop function")
+		test.EqError(t, err, "options[2]: the final Options must contain a Stop function")
 	})
 
 	t.Run("happy path", func(t *testing.T) {
@@ -32,8 +34,8 @@ func Test_mergeOptions(t *testing.T) {
 
 		test.Nil(t, err)
 
-		test.NotNil(t, o.Start)
-		test.ErrorContains(t, o.Start(nil), "f1")
+		must.NotNil(t, o.Start)
+		test.EqError(t, o.Start(nil), "f1")
 	})
 }
 
@@ -46,16 +48,16 @@ func TestOptions_applyFunctionOptions(t *testing.T) {
 			CheckReady: func(ctx context.Context) (bool, error) { return true, errors.New("e3") },
 		}, true))
 
-		test.NotNil(t, o.Start)
-		test.ErrorContains(t, o.Start(nil), "e1")
+		must.NotNil(t, o.Start)
+		test.EqError(t, o.Start(nil), "e1")
 
-		test.NotNil(t, o.Stop)
-		test.ErrorContains(t, o.Stop(nil), "e2")
+		must.NotNil(t, o.Stop)
+		test.EqError(t, o.Stop(nil), "e2")
 
-		test.NotNil(t, o.CheckReady)
+		must.NotNil(t, o.CheckReady)
 		b, e := o.CheckReady(nil)
 		test.True(t, b)
-		test.ErrorContains(t, e, "e3")
+		test.EqError(t, e, "e3")
 	})
 
 	t.Run("mapping: run stop", func(t *testing.T) {
@@ -65,11 +67,11 @@ func TestOptions_applyFunctionOptions(t *testing.T) {
 			Stop: func(ctx context.Context) error { return errors.New("e2") },
 		}, true))
 
-		test.NotNil(t, o.Run)
-		test.ErrorContains(t, o.Run(nil), "e1")
+		must.NotNil(t, o.Run)
+		test.EqError(t, o.Run(nil), "e1")
 
-		test.NotNil(t, o.Stop)
-		test.ErrorContains(t, o.Stop(nil), "e2")
+		must.NotNil(t, o.Stop)
+		test.EqError(t, o.Stop(nil), "e2")
 	})
 
 	t.Run("mostly errors", func(t *testing.T) {
@@ -118,4 +120,40 @@ func TestOptions_applyFunctionOptions(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestOptions_buildComponent(t *testing.T) {
+	opts := Options{
+		Run:        func(ctx context.Context) error { return errors.New("e1") },
+		Start:      func(ctx context.Context) error { return errors.New("e2") },
+		CheckReady: func(ctx context.Context) (bool, error) { return false, errors.New("e3") },
+		Stop:       func(ctx context.Context) error { return errors.New("e4") },
+	}
+	comp := opts.buildComponent("comp1")
+
+	// Func ptrs are not comparable, so we check them first.
+	must.NotNil(t, comp.ImplRun)
+	test.EqError(t, comp.ImplRun(nil), "e1")
+
+	must.NotNil(t, comp.ImplStart)
+	test.EqError(t, comp.ImplStart(nil), "e2")
+
+	must.NotNil(t, comp.ImplRun)
+	b, e := comp.ImplCheckReady(nil)
+	test.False(t, b)
+	test.EqError(t, e, "e3")
+
+	must.NotNil(t, comp.ImplStop)
+	test.EqError(t, comp.ImplStop(nil), "e4")
+
+	// Clear the pointers, since they're no longer needed
+	comp.ImplRun = nil
+	comp.ImplStart = nil
+	comp.ImplCheckReady = nil
+	comp.ImplStop = nil
+
+	// After, we'll check all the other public fields
+	test.Eq(t, &internal.Component{
+		Name: "comp1",
+	}, comp)
 }

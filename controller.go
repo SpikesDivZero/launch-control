@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+
+	"github.com/spikesdivzero/launch-control/internal"
 )
 
 // Controller is the primary interface into this package.
@@ -46,6 +48,9 @@ func (c *Controller) Launch(name string, opts ...Options) {
 		panic(fmt.Sprintf("Controller.Launch: option validation failed: %v", err))
 	}
 
+	comp := merged.buildComponent(name)
+
+	_ = comp
 	panic("NYI: Controller.Launch")
 }
 
