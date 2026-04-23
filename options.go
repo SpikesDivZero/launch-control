@@ -1,6 +1,10 @@
 package launchcontrol
 
-import "context"
+import (
+	"context"
+	"errors"
+	"fmt"
+)
 
 // Options defines how you'd like this package to run your component.
 //
@@ -65,4 +69,69 @@ type Options struct {
 	//
 	// Any non-nil error will be logged and returned in Controller.AllErrors. The error may be wrapped.
 	Stop func(context.Context) error
+}
+
+func newDefaultOptions() Options {
+	return Options{}
+}
+
+func mergeOptions(opts []Options) (Options, error) {
+	ret := newDefaultOptions()
+	for i, o := range opts {
+		isFinal := len(opts) == i+1
+		if err := ret.applyOptions(o, isFinal); err != nil {
+			return ret, fmt.Errorf("options[%d]: %w", i, err)
+		}
+	}
+	return ret, nil
+}
+
+func (o *Options) applyFunctionOptions(from Options, isFinal bool) error {
+	hasRun, hasStart := from.Run != nil, from.Start != nil
+	hasCheckReady := from.CheckReady != nil
+	hasStop := from.Stop != nil
+
+	// Non-final Options must contain no functions (in which case, there's little for us to do)
+	if !isFinal {
+		if hasAny := hasRun || hasStart || hasCheckReady || hasStop; hasAny {
+			return errors.New("only the final Options may contain implementation functions")
+		} else {
+			return nil
+		}
+	}
+
+	// The final Options must contain the correct function configuration
+
+	if !hasStop {
+		return errors.New("the final Options must contain a Stop function")
+	}
+
+	if hasRun && hasStart {
+		return errors.New("the final Options must not contain both of Run and Start")
+	} else if !hasRun && !hasStart {
+		return errors.New("the final Options must contain either Run or Start")
+	}
+
+	o.Run = from.Run
+	o.Start = from.Start
+	o.CheckReady = from.CheckReady
+	o.Stop = from.Stop
+
+	return nil
+}
+
+func (o *Options) applyOptions(from Options, isFinal bool) error {
+	if err := o.applyFunctionOptions(from, isFinal); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (o *Options) validate() error {
+	// The run style was validated over in applyFunctionOptions
+
+	// Here, we should validate all other remaining values, and assign them defaults as necessary.
+
+	return errors.New("NYI: Options.validate")
 }

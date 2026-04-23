@@ -2,6 +2,7 @@ package launchcontrol
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 )
 
@@ -29,6 +30,22 @@ func New(ctx context.Context) *Controller {
 //
 // If the controller is shutting down or dead, then the Launch request will be ignored.
 func (c *Controller) Launch(name string, opts ...Options) {
+	if name == "" {
+		panic("Controller.Launch: must provide a name")
+	}
+	if len(opts) == 0 {
+		panic("Controller.Launch: must pass at least one Options")
+	}
+
+	merged, err := mergeOptions(opts)
+	if err != nil {
+		panic(fmt.Sprintf("Controller.Launch: option validation failed: %v", err))
+	}
+
+	if err := merged.validate(); err != nil {
+		panic(fmt.Sprintf("Controller.Launch: option validation failed: %v", err))
+	}
+
 	panic("NYI: Controller.Launch")
 }
 
