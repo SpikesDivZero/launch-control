@@ -61,6 +61,14 @@ type Options struct {
 	//   - false: The component is not ready. We'll retry the check.
 	CheckReady func(context.Context) (bool, error)
 
+	// CheckReadyBackoff defines what sort of delay we use between calls to CheckReady.
+	//
+	// CheckReadyBackoff is called after each false CheckReady result. A returned positive delay is
+	// used as the sleep duration for that loop iteration.
+	//
+	// If CheckReadyBackoff is not provided, then we do not use a retry delay at all.
+	CheckReadyBackoff BackoffFunc
+
 	// Stop defines how the controller should terminate your component.
 	//
 	// In the event that you're using Run, this should signal to the blocking Run function that it's
@@ -155,9 +163,10 @@ func (o *Options) buildComponent(name string) *component.Component {
 	return &component.Component{
 		Name: name,
 
-		ImplRun:        o.Run,
-		ImplCheckReady: o.CheckReady,
-		ImplStop:       o.Stop,
+		ImplRun:               o.Run,
+		ImplCheckReady:        o.CheckReady,
+		ImplCheckReadyBackoff: o.CheckReadyBackoff,
+		ImplStop:              o.Stop,
 
 		SSW: ssw,
 	}

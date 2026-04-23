@@ -16,9 +16,10 @@ type ControllerCallbacks struct {
 type Component struct {
 	Name string
 
-	ImplRun        func(context.Context) error
-	ImplCheckReady func(context.Context) (bool, error)
-	ImplStop       func(context.Context) error
+	ImplRun               func(context.Context) error
+	ImplCheckReady        func(context.Context) (bool, error)
+	ImplCheckReadyBackoff func() time.Duration
+	ImplStop              func(context.Context) error
 
 	// We won't use this directly, but we keep a pointer to it here for other test inspection.
 	SSW *StartStopWrapper

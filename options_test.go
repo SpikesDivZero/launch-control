@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/shoenig/test"
 	"github.com/shoenig/test/must"
@@ -155,9 +156,10 @@ func TestOptions_buildComponent(t *testing.T) {
 
 	t.Run("main", func(t *testing.T) {
 		opts := Options{
-			Run:        func(ctx context.Context) error { return errors.New("e1") },
-			CheckReady: func(ctx context.Context) (bool, error) { return false, errors.New("e3") },
-			Stop:       func(ctx context.Context) error { return errors.New("e4") },
+			Run:               func(ctx context.Context) error { return errors.New("e1") },
+			CheckReady:        func(ctx context.Context) (bool, error) { return false, errors.New("e3") },
+			CheckReadyBackoff: func() time.Duration { return 48 },
+			Stop:              func(ctx context.Context) error { return errors.New("e4") },
 		}
 		comp := opts.buildComponent("comp1")
 
@@ -170,12 +172,16 @@ func TestOptions_buildComponent(t *testing.T) {
 		test.False(t, b)
 		test.EqError(t, e, "e3")
 
+		must.NotNil(t, comp.ImplCheckReadyBackoff)
+		test.EqOp(t, 48, comp.ImplCheckReadyBackoff())
+
 		must.NotNil(t, comp.ImplStop)
 		test.EqError(t, comp.ImplStop(nil), "e4")
 
 		// Clear the pointers, since they're no longer needed
 		comp.ImplRun = nil
 		comp.ImplCheckReady = nil
+		comp.ImplCheckReadyBackoff = nil
 		comp.ImplStop = nil
 
 		// After, we'll check all the other public fields
