@@ -1,10 +1,12 @@
-package internal
+package controller
 
 import (
 	"context"
 	"log/slog"
 	"slices"
 	"sync"
+
+	"github.com/spikesdivzero/launch-control/internal/component"
 )
 
 // If a function is undocumented, first check to see if it's documented in the public interface.
@@ -26,7 +28,7 @@ func NewController(ctx context.Context) *Controller {
 	}
 }
 
-func (c *Controller) Launch(name string, comp *Component) {
+func (c *Controller) Launch(name string, comp *component.Component) {
 	panic("NYI: Controller.Launch")
 }
 

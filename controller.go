@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/spikesdivzero/launch-control/internal"
+	"github.com/spikesdivzero/launch-control/internal/controller"
 )
 
 // Controller is the primary interface into this package.
@@ -13,7 +13,7 @@ import (
 // The Controller tracks the lifecycle of all components spawned within it, and offers a way to
 // block until all components have exited.
 type Controller struct {
-	ic *internal.Controller
+	ic *controller.Controller
 }
 
 // New returns a new Controller, using the provided context as it's root context.
@@ -21,7 +21,7 @@ type Controller struct {
 // Any contexts passed into a component will be children of this context.
 func New(ctx context.Context) *Controller {
 	return &Controller{
-		ic: internal.NewController(ctx),
+		ic: controller.NewController(ctx),
 	}
 }
 

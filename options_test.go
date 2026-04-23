@@ -7,7 +7,7 @@ import (
 
 	"github.com/shoenig/test"
 	"github.com/shoenig/test/must"
-	"github.com/spikesdivzero/launch-control/internal"
+	"github.com/spikesdivzero/launch-control/internal/component"
 )
 
 func Test_mergeOptions(t *testing.T) {
@@ -153,7 +153,7 @@ func TestOptions_buildComponent(t *testing.T) {
 	comp.ImplStop = nil
 
 	// After, we'll check all the other public fields
-	test.Eq(t, &internal.Component{
+	test.Eq(t, &component.Component{
 		Name: "comp1",
 	}, comp)
 }
