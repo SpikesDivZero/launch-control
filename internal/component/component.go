@@ -9,6 +9,7 @@ import (
 const AsyncGracePeriod = 100 * time.Millisecond
 
 type ControllerCallbacks struct {
+	RequestStop     func(c *Component, reason error)
 	ComponentExited func(c *Component, err error)
 }
 
@@ -57,6 +58,8 @@ func (c *Component) Start() {
 	}()
 
 	go c.monitorExit(resultCh)
+
+	c.waitReady()
 }
 
 // Designed to run in a separate goroutine, this monitors the result channel provided by Start.

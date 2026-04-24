@@ -68,6 +68,12 @@ func TestComponent_Start(t *testing.T) {
 			return nil
 		}
 
+		checkedReady := false
+		c.ImplCheckReady = func(ctx context.Context) (bool, error) {
+			checkedReady = true
+			return true, nil
+		}
+
 		notifiedCh := make(chan struct{})
 		c.Register(t.Context(), slog.New(slog.DiscardHandler), ControllerCallbacks{
 			ComponentExited: func(c *Component, err error) {
@@ -83,6 +89,7 @@ func TestComponent_Start(t *testing.T) {
 		default:
 			t.Error("ImplRun did not start?")
 		}
+		test.True(t, checkedReady)
 
 		c.runCtxCancel(nil)
 		synctest.Wait()
