@@ -27,6 +27,9 @@ func TestComponentError(t *testing.T) {
 	c := &Component{Name: "objname"}
 	wrapped = WrapComponentError(c, "stage2", base)
 	test.EqError(t, wrapped, ComponentError{"objname", "stage2", base}.Error())
+
+	// Correctly implements error wrapping for the errors package
+	test.ErrorIs(t, wrapped, base)
 }
 
 func TestPrematureChannelCloseError(t *testing.T) {

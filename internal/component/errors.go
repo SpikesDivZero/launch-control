@@ -22,6 +22,10 @@ func (ce ComponentError) Error() string {
 	return fmt.Sprintf("component error: name=%q stage=%q err=%v", ce.Name, ce.Stage, ce.Err)
 }
 
+func (ce ComponentError) Unwrap() error {
+	return ce.Err
+}
+
 func WrapComponentError[T *Component | string](comp T, stage string, err error) error {
 	if err == nil {
 		return nil
