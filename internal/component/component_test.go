@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"testing"
 	"testing/synctest"
+	"time"
 
 	"github.com/shoenig/test"
 	"github.com/shoenig/test/must"
@@ -148,4 +149,73 @@ func TestComponent_monitorExit(t *testing.T) {
 
 		c.monitorExit(ch)
 	})
+}
+
+func TestComponent_Stop(t *testing.T) {
+	err1 := errors.New("test err")
+
+	tests := []struct {
+		name      string
+		runWaitD  time.Duration
+		stopWaitD time.Duration
+		stopErr   error
+		wantD     time.Duration
+	}{
+		{
+			"happy, run returns first",
+			3 * time.Second,
+			5 * time.Second,
+			nil,
+			5 * time.Second,
+		},
+		{
+			"happy, stop returns first",
+			8 * time.Second,
+			2 * time.Second,
+			nil,
+			8 * time.Second,
+		},
+		{
+			"happy-ish, stop returns error",
+			time.Second,
+			time.Second,
+			err1,
+			time.Second,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotD := syncTimeIt(t, func(t *testing.T) {
+				c := &Component{
+					Name: "test",
+				}
+
+				c.Register(t.Context(), nil, ControllerCallbacks{
+					RequestStop: func(c *Component, reason error) {}, // We're not testing monitorExit here
+					ComponentError: func(gotC *Component, gotErr error) {
+						test.EqOp(t, c, gotC)
+						test.ErrorIs(t, gotErr, WrapComponentError(c, "stop", tt.stopErr))
+					},
+				})
+
+				requestStopCh := make(chan struct{})
+				c.ImplRun = func(ctx context.Context) error {
+					<-requestStopCh
+					time.Sleep(tt.runWaitD)
+					return nil
+				}
+
+				c.ImplStop = func(ctx context.Context) error {
+					close(requestStopCh)
+					time.Sleep(tt.stopWaitD)
+					return tt.stopErr
+				}
+
+				c.Start()
+				c.Stop()
+			})
+
+			test.Eq(t, tt.wantD, gotD)
+		})
+	}
 }

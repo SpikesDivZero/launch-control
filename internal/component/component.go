@@ -11,6 +11,10 @@ const AsyncGracePeriod = 100 * time.Millisecond
 type ControllerCallbacks struct {
 	// Requests that the controller enter a shutting down state (if it's not already doing so)
 	RequestStop func(c *Component, reason error)
+
+	// Notifies the controller of an error, that doesn't necessarily require transitioning into
+	// a shutting down state. (Or, in the case of ImplStop, we're already stopping anyways)
+	ComponentError func(c *Component, err error)
 }
 
 // For now, a thin wrapper around the stuff we import from the public interface Options.
@@ -78,4 +82,16 @@ func (c *Component) monitorExit(resultCh chan error) {
 	// the stop process is only considered succssfully completed when both have finished.
 
 	c.callbacks.RequestStop(c, WrapComponentError(c, "exited", err))
+}
+
+func (c *Component) Stop() {
+	// For our stop process, we'll define it as blocking until _both_ of ImplStop and ImplRun have returned.
+	//
+	// For now, we'll take the simplest approach possible. We still want to implement proper timeouts, so
+	// that's a thing to address later on.
+
+	err := c.ImplStop(c.ctx)
+	c.callbacks.ComponentError(c, WrapComponentError(c, "stop", err))
+
+	<-c.runExitedCh
 }
