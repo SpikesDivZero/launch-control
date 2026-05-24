@@ -147,27 +147,30 @@ func (o *Options) validate() error {
 }
 
 func (o *Options) buildComponent(name string) *component.Component {
-	// If we're using Start+Stop, then wrap it in a StartStopWrapper
-	var ssw *component.StartStopWrapper
-	if o.Start != nil {
-		ssw = &component.StartStopWrapper{
+	comp := &component.Component{
+		Name: name,
+
+		ImplCheckReady:        o.CheckReady,
+		ImplCheckReadyBackoff: o.CheckReadyBackoff,
+	}
+
+	if o.Start == nil {
+		// Using Run+Stop
+		comp.ImplRun = o.Run
+		comp.ImplStop = o.Stop
+
+	} else {
+		// Using Start+Stop
+		ssw := &component.StartStopWrapper{
+			Comp:      comp,
 			ImplStart: o.Start,
 			ImplStop:  o.Stop,
 		}
 
-		o.Start = nil
-		o.Run = ssw.Run
-		o.Stop = ssw.Stop
+		comp.SSW = ssw
+		comp.ImplRun = ssw.Run
+		comp.ImplStop = ssw.Stop
 	}
 
-	return &component.Component{
-		Name: name,
-
-		ImplRun:               o.Run,
-		ImplCheckReady:        o.CheckReady,
-		ImplCheckReadyBackoff: o.CheckReadyBackoff,
-		ImplStop:              o.Stop,
-
-		SSW: ssw,
-	}
+	return comp
 }

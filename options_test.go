@@ -134,6 +134,8 @@ func TestOptions_buildComponent(t *testing.T) {
 		// We won't test the full comp internals here -- for that, see the "main" subtest (below)
 		test.Eq(t, "comp-ssw", comp.Name)
 
+		test.EqOp(t, comp, comp.SSW.Comp)
+
 		// Enable our test mocking in the SSW
 		must.NotNil(t, comp.SSW)
 		comp.SSW.TestControl.MockRun = func(ctx context.Context) error { return errors.New("m1") }
