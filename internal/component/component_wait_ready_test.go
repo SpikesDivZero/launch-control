@@ -98,7 +98,8 @@ func TestComponent_waitReady(t *testing.T) {
 					gotStopErr = reason
 				}
 
-				c.waitReady()
+				// TODO: Test that we're plumbing the start/waitReady context, and not the run context.
+				c.waitReady(t.Context())
 
 				test.Eq(t, len(tt.mockCheckReturn), checkCalls)
 				test.Eq(t, len(tt.mockBackoffReturn), backoffCalls)
@@ -181,11 +182,13 @@ func TestComponent_waitReady_loop(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			gotD := syncTimeIt(t, func(t *testing.T) {
-				// In this function, we should only use the context provided in fn arg
-				c := &Component{}
+				runCtx, runCtxCancel := context.WithCancel(t.Context())
+				defer runCtxCancel()
 
-				ctx, cancel := context.WithCancel(t.Context())
-				defer cancel()
+				startCtx, startCtxCancel := context.WithCancel(t.Context())
+				defer startCtxCancel()
+
+				c := &Component{runCtx: runCtx}
 
 				checkCalls := 0
 				fnCheck := func(ctx context.Context) (bool, error) {
@@ -195,11 +198,14 @@ func TestComponent_waitReady_loop(t *testing.T) {
 						return false, err
 					}
 
+					// The check function should get the run context (not the start context)
+					test.EqOp(t, runCtx, ctx)
+
 					md := tt.mockCheckReturn[checkCalls]
 					checkCalls++
 
 					if md.abort {
-						cancel()
+						startCtxCancel()
 						synctest.Wait()
 					}
 					return md.ok, md.err
@@ -217,7 +223,7 @@ func TestComponent_waitReady_loop(t *testing.T) {
 					backoffCalls++
 
 					if md.abort {
-						cancel()
+						startCtxCancel()
 						synctest.Wait()
 					}
 					return md.d
@@ -230,11 +236,11 @@ func TestComponent_waitReady_loop(t *testing.T) {
 				}
 
 				if tt.control != nil {
-					tt.control(cancel)
+					tt.control(startCtxCancel)
 					synctest.Wait()
 				}
 
-				c.waitReady_loop(ctx,
+				c.waitReady_loop(startCtx,
 					fnCheck,
 					fnCheckBackoff,
 					fnRequestStop)
@@ -260,7 +266,8 @@ func TestComponent_waitReady_createShouldAbort(t *testing.T) {
 	}
 
 	type testControl struct {
-		cancelCtx      context.CancelFunc
+		cancelStartCtx context.CancelFunc
+		cancelRunCtx   context.CancelFunc
 		closeRunExited func()
 	}
 
@@ -270,9 +277,14 @@ func TestComponent_waitReady_createShouldAbort(t *testing.T) {
 		causeAbort func(tc testControl)
 	}{
 		{
-			"immediate: ctx cancel",
+			"immediate: start ctx cancel",
 			true,
-			func(tc testControl) { tc.cancelCtx() },
+			func(tc testControl) { tc.cancelStartCtx() },
+		},
+		{
+			"immediate: run ctx cancel",
+			true,
+			func(tc testControl) { tc.cancelRunCtx() },
 		},
 		{
 			"immediate: responds to run exited",
@@ -280,9 +292,14 @@ func TestComponent_waitReady_createShouldAbort(t *testing.T) {
 			func(tc testControl) { tc.closeRunExited() },
 		},
 		{
-			"normal: ctx cancel",
+			"normal: start ctx cancel",
 			false,
-			func(tc testControl) { tc.cancelCtx() },
+			func(tc testControl) { tc.cancelStartCtx() },
+		},
+		{
+			"normal: run ctx cancel",
+			false,
+			func(tc testControl) { tc.cancelRunCtx() },
 		},
 		{
 			"normal: responds to run exited",
@@ -292,13 +309,17 @@ func TestComponent_waitReady_createShouldAbort(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
-				ctx, cancel := context.WithCancel(t.Context())
-				defer cancel()
+				runCtx, runCtxCancel := context.WithCancel(t.Context())
+				defer runCtxCancel()
+
+				startCtx, startCtxCancel := context.WithCancel(t.Context())
+				defer startCtxCancel()
 
 				runExitedCh := make(chan struct{})
 
 				tc := testControl{
-					cancelCtx:      cancel,
+					cancelStartCtx: startCtxCancel,
+					cancelRunCtx:   runCtxCancel,
 					closeRunExited: func() { close(runExitedCh) },
 				}
 
@@ -307,8 +328,11 @@ func TestComponent_waitReady_createShouldAbort(t *testing.T) {
 					synctest.Wait()
 				}
 
-				c := &Component{runExitedCh: runExitedCh}
-				abortCh, shouldAbort := c.waitReady_createShouldAbort(ctx)
+				c := &Component{
+					runCtx:      runCtx,
+					runExitedCh: runExitedCh,
+				}
+				abortCh, shouldAbort := c.waitReady_createShouldAbort(startCtx)
 
 				test.EqOp(t, tt.immediate, isChanClosed(abortCh))
 				test.EqOp(t, tt.immediate, shouldAbort())

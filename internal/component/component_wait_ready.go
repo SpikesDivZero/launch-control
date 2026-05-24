@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func (c *Component) waitReady() {
+func (c *Component) waitReady(startCtx context.Context) {
 	if c.ImplCheckReady == nil {
 		return
 	}
@@ -18,7 +18,7 @@ func (c *Component) waitReady() {
 	// a request to stop running comes in, and runCtx may close sooner than the component base
 	// context otherwise would.
 	c.waitReady_loop(
-		c.runCtx,
+		startCtx,
 		c.ImplCheckReady,
 		c.ImplCheckReadyBackoff,
 		c.callbacks.RequestStop,
@@ -27,21 +27,21 @@ func (c *Component) waitReady() {
 
 // This is pulled out into it's own function as otherwise the main loop is kind of a pain to test.
 func (c *Component) waitReady_loop(
-	ctx context.Context,
+	startCtx context.Context,
 	fnCheck func(context.Context) (bool, error),
 	fnBackoff func() time.Duration,
 	fnRequestStop func(*Component, error),
 ) bool {
 	// We should abort when our main context is done, or run has already exited.
 	// In both cases, there's no point in continuing our loop
-	abortCh, shouldAbort := c.waitReady_createShouldAbort(ctx)
+	abortCh, shouldAbort := c.waitReady_createShouldAbort(startCtx)
 
 	for {
 		if shouldAbort() {
 			return false
 		}
 
-		ready, err := fnCheck(ctx)
+		ready, err := fnCheck(c.runCtx)
 		if err != nil {
 			// User-provided error, so we won't wrap it
 			fnRequestStop(c, err)
@@ -61,7 +61,7 @@ func (c *Component) waitReady_loop(
 // The returned channel is closed when the loop should be aborted.
 //
 // The returned function returns true when the channel is closed.
-func (c *Component) waitReady_createShouldAbort(ctx context.Context) (<-chan struct{}, func() bool) {
+func (c *Component) waitReady_createShouldAbort(startCtx context.Context) (<-chan struct{}, func() bool) {
 	abortCh := make(chan struct{})
 
 	// Before we start any async work, let's first check to see if we're already aborting.
@@ -70,7 +70,9 @@ func (c *Component) waitReady_createShouldAbort(ctx context.Context) (<-chan str
 	// and the monitoring coroutine won't run for the first time up for a while yet to come. (Potential race)
 	alreadyAborting := false
 	select {
-	case <-ctx.Done():
+	case <-startCtx.Done():
+		alreadyAborting = true
+	case <-c.runCtx.Done():
 		alreadyAborting = true
 	case <-c.runExitedCh:
 		alreadyAborting = true
@@ -83,7 +85,8 @@ func (c *Component) waitReady_createShouldAbort(ctx context.Context) (<-chan str
 
 	go func() {
 		select {
-		case <-ctx.Done():
+		case <-startCtx.Done():
+		case <-c.runCtx.Done():
 		case <-c.runExitedCh:
 		}
 		close(abortCh)

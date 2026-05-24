@@ -48,7 +48,7 @@ func (c *Component) Register(ctx context.Context, log *slog.Logger, callbacks Co
 	c.callbacks = callbacks
 }
 
-func (c *Component) Start() {
+func (c *Component) Start(startCtx context.Context) {
 	exitedCh := make(chan struct{})
 	resultCh := make(chan error, 1)
 
@@ -63,7 +63,7 @@ func (c *Component) Start() {
 
 	go c.monitorExit(resultCh)
 
-	c.waitReady()
+	c.waitReady(startCtx)
 }
 
 // Designed to run in a separate goroutine, this monitors the result channel provided by Start.

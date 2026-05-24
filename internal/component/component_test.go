@@ -62,16 +62,25 @@ func TestComponent_Start(t *testing.T) {
 			Name: "test",
 		}
 
+		startCtx, startCtxCancel := context.WithCancel(t.Context())
+		defer startCtxCancel()
+
 		startedCh := make(chan struct{})
 		c.ImplRun = func(ctx context.Context) error {
 			close(startedCh)
 			<-c.runCtx.Done()
+
+			test.EqOp(t, c.runCtx, ctx)
+
 			return nil
 		}
 
 		checkedReady := false
 		c.ImplCheckReady = func(ctx context.Context) (bool, error) {
 			checkedReady = true
+
+			test.EqOp(t, c.runCtx, ctx)
+
 			return true, nil
 		}
 
@@ -82,7 +91,8 @@ func TestComponent_Start(t *testing.T) {
 			},
 		})
 
-		c.Start()
+		// TODO: Test that we're plumbing the startCtx all the way down (separate from the runCtx)
+		c.Start(startCtx)
 		synctest.Wait()
 
 		select {
@@ -211,7 +221,7 @@ func TestComponent_Stop(t *testing.T) {
 					return tt.stopErr
 				}
 
-				c.Start()
+				c.Start(t.Context())
 				c.Stop()
 			})
 
