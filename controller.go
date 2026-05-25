@@ -70,7 +70,8 @@ func (c *Controller) RequestStop(reason error) {
 //
 // If Wait is called before any components have been launched, then the call panics.
 func (c *Controller) Wait() error {
-	panic("NYI: Controller.Wait") // TODO: Needs c.ic.doneCh
+	c.ic.Wait()
+	return c.Err()
 }
 
 // Err returns the first non-nill error observed by the controller.

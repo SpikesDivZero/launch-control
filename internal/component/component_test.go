@@ -10,6 +10,7 @@ import (
 
 	"github.com/shoenig/test"
 	"github.com/shoenig/test/must"
+	"github.com/spikesdivzero/launch-control/internal/testutil"
 )
 
 func TestComponent_Register(t *testing.T) {
@@ -95,21 +96,13 @@ func TestComponent_Start(t *testing.T) {
 		c.Start(startCtx)
 		synctest.Wait()
 
-		select {
-		case <-startedCh:
-		default:
-			t.Error("ImplRun did not start?")
-		}
+		testutil.ChanReadIsClosed(t, startedCh, test.Sprint("ImplRun started"))
 		test.True(t, checkedReady)
 
 		c.runCtxCancel(nil)
 		synctest.Wait()
 
-		select {
-		case <-notifiedCh:
-		default:
-			t.Error("monitorExit did not notify exit. did it start?")
-		}
+		testutil.ChanReadIsClosed(t, notifiedCh, test.Sprint("monitorExit returned"))
 	})
 }
 

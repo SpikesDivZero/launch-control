@@ -160,10 +160,6 @@ func TestStartStopWrapper_Stop(t *testing.T) {
 		ssw := newTestingSSW(t)
 		ssw.requestStopCh = make(chan struct{})
 		test.NoError(t, ssw.Stop(t.Context()))
-		select {
-		case <-ssw.requestStopCh:
-		default:
-			t.Error("Stop did not close requestStopCh")
-		}
+		testutil.ChanReadIsClosed(t, ssw.requestStopCh)
 	})
 }
