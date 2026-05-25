@@ -25,13 +25,13 @@ func TestComponent_Register(t *testing.T) {
 
 	notifyCalled := false
 	c.Register(ctx, log, ControllerCallbacks{
-		RequestStop: func(c *Component, err error) { notifyCalled = true },
+		RequestStop: func(err error) { notifyCalled = true },
 	})
 
 	test.EqOp(t, log, c.log)
 
 	must.NotNil(t, c.callbacks.RequestStop)
-	c.callbacks.RequestStop(nil, nil)
+	c.callbacks.RequestStop(nil)
 	test.True(t, notifyCalled)
 
 	// check the ctx chain
@@ -87,7 +87,7 @@ func TestComponent_Start(t *testing.T) {
 
 		notifiedCh := make(chan struct{})
 		c.Register(t.Context(), slog.New(slog.DiscardHandler), ControllerCallbacks{
-			RequestStop: func(c *Component, err error) {
+			RequestStop: func(err error) {
 				close(notifiedCh)
 			},
 		})
@@ -111,9 +111,8 @@ func TestComponent_monitorExit(t *testing.T) {
 
 	var wantErr error
 	var calledNotify, wantCalledNotify int
-	c.callbacks.RequestStop = func(gotC *Component, gotErr error) {
+	c.callbacks.RequestStop = func(gotErr error) {
 		calledNotify++
-		test.EqOp(t, c, gotC)
 		test.ErrorIs(t, gotErr, wantErr)
 	}
 	defer func() {
@@ -194,9 +193,8 @@ func TestComponent_Stop(t *testing.T) {
 				}
 
 				c.Register(t.Context(), nil, ControllerCallbacks{
-					RequestStop: func(c *Component, reason error) {}, // We're not testing monitorExit here
-					ComponentError: func(gotC *Component, gotErr error) {
-						test.EqOp(t, c, gotC)
+					RequestStop: func(reason error) {}, // We're not testing monitorExit here
+					ComponentError: func(gotErr error) {
 						test.ErrorIs(t, gotErr, WrapComponentError(c, "stop", tt.stopErr))
 					},
 				})

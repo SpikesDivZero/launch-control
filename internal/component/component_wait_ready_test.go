@@ -93,8 +93,7 @@ func TestComponent_waitReady(t *testing.T) {
 				}
 
 				var gotStopErr error
-				c.callbacks.RequestStop = func(gotC *Component, reason error) {
-					test.Eq(t, c, gotC)
+				c.callbacks.RequestStop = func(reason error) {
 					gotStopErr = reason
 				}
 
@@ -230,8 +229,7 @@ func TestComponent_waitReady_loop(t *testing.T) {
 				}
 
 				var gotStopErr error
-				fnRequestStop := func(gotC *Component, reason error) {
-					test.Eq(t, c, gotC)
+				fnRequestStop := func(reason error) {
 					gotStopErr = reason
 				}
 

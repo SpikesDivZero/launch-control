@@ -30,7 +30,7 @@ func (c *Component) waitReady_loop(
 	startCtx context.Context,
 	fnCheck func(context.Context) (bool, error),
 	fnBackoff func() time.Duration,
-	fnRequestStop func(*Component, error),
+	fnRequestStop func(error),
 ) bool {
 	// We should abort when our main context is done, or run has already exited.
 	// In both cases, there's no point in continuing our loop
@@ -44,7 +44,7 @@ func (c *Component) waitReady_loop(
 		ready, err := fnCheck(c.runCtx)
 		if err != nil {
 			// User-provided error, so we won't wrap it
-			fnRequestStop(c, err)
+			fnRequestStop(err)
 			return false
 		} else if ready {
 			return true
