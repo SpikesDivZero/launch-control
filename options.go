@@ -140,10 +140,12 @@ func (o *Options) applyOptions(from Options, isFinal bool) error {
 
 func (o *Options) validate() error {
 	// The run style was validated over in applyFunctionOptions
+	// The following values are already validated/defaulted:
+	// * Run/Start, Stop -- applyFuncitonOptions
+	// * CheckReady -- defaults to nil, skipping wait-ready loop entirely
+	// * CheckReadyBackoff -- defaults to ConstBackoff(0) inside of the controller logic
 
-	// Here, we should validate all other remaining values, and assign them defaults as necessary.
-
-	return errors.New("NYI: Options.validate")
+	return nil
 }
 
 func (o *Options) buildComponent(name string) *component.Component {
